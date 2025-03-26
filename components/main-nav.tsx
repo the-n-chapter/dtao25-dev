@@ -163,8 +163,8 @@ export function MainNav() {
               </nav>
             </SheetContent>
           </Sheet>
-          <Link href="/dashboard" className="font-bold">
-            SmartPin
+          <Link href="/dashboard" className="font-bold text-[#5DA9E9]">
+            pinova
           </Link>
         </div>
 

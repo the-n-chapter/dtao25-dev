@@ -90,83 +90,89 @@ export default function SignupPage() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSignup)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input id="username" placeholder="Username" className="rounded-xl border px-4 py-3" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-xs text-destructive" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="relative">
+          <form onSubmit={form.handleSubmit(handleSignup)} className="flex flex-col">
+            {/* Add spacing above the inputs */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
                     <FormControl>
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Password"
-                        className="rounded-xl border px-4 py-3 pr-10"
-                        {...field}
-                      />
+                      <Input id="username" placeholder="Username" className="rounded-xl border px-4 py-3" {...field} />
                     </FormControl>
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  <FormMessage className="text-xs text-destructive" />
-                </FormItem>
-              )}
-            />
+                    <FormMessage className="text-xs text-destructive" />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="relative">
-                    <FormControl>
-                      <Input
-                        id="confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm Password"
-                        className="rounded-xl border px-4 py-3 pr-10"
-                        {...field}
-                      />
-                    </FormControl>
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  <FormMessage className="text-xs text-destructive" />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Password"
+                          className="rounded-xl border px-4 py-3 pr-10"
+                          {...field}
+                        />
+                      </FormControl>
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    <FormMessage className="text-xs text-destructive" />
+                  </FormItem>
+                )}
+              />
 
-            <Button 
-              type="submit" 
-              className="w-full rounded-xl bg-[#5DA9E9] hover:bg-[#4A98D8] px-4 py-3 h-auto font-medium" 
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating account..." : "Sign Up"}
-            </Button>
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          id="confirm-password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm Password"
+                          className="rounded-xl border px-4 py-3 pr-10"
+                          {...field}
+                        />
+                      </FormControl>
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    <FormMessage className="text-xs text-destructive" />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Add spacing below the inputs */}
+            <div className="mt-6">
+              <Button 
+                type="submit" 
+                className="w-full rounded-xl bg-[#5DA9E9] hover:bg-[#4A98D8] px-4 py-3 h-auto font-medium" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account..." : "Sign Up"}
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
