@@ -223,167 +223,144 @@ export default function SettingsPage() {
           </Alert>
         )}
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          </TabsList>
+        <div className="max-w-lg mx-auto">
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="profile" className="space-y-6">
-            {/* Account Information */}
-            <div className="rounded-lg border p-4 sm:p-5 md:p-6">
-              <h2 className="mb-4 text-xl font-semibold">Account Information</h2>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input id="username" value={username} disabled className="bg-muted" />
+            <TabsContent value="profile" className="space-y-6">
+              {/* Account Information */}
+              <div className="rounded-lg border p-4 sm:p-5 md:p-6">
+                <h2 className="mb-4 text-xl font-semibold">Account Information</h2>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input id="username" value={username} disabled className="bg-muted" />
+                  </div>
+                  <div className="space-y-2">
+                    
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      disabled
-                      className="bg-muted pr-10"
+              </div>
+
+              {/* Delete Account Section */}
+              <div className="rounded-lg border p-5 sm:p-6 md:p-7">
+                <h2 className="mb-2 text-xl font-semibold text-destructive">Delete Account</h2>
+                <p className="mb-4 text-sm text-gray-600">
+                  Are you sure you want to delete your account? This action cannot be <span className="font-bold">undone</span>. All your data, including paired devices, will be permanently removed.
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="agree-delete"
+                      checked={agreeToDelete}
+                      onChange={(e) => setAgreeToDelete(e.target.checked)}
+                      className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    <label htmlFor="agree-delete" className="text-sm text-gray-700">
+                      Yes, I agree.
+                    </label>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="destructive"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting || !agreeToDelete}
+                      className="rounded-md px-8"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-500" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-500" />
-                      )}
-                    </button>
+                      {isDeleting ? "Deleting..." : "DELETE"}
+                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
+            </TabsContent>
 
-            {/* Delete Account Section */}
-            <div className="rounded-lg border p-5 sm:p-6 md:p-7">
-              <h2 className="mb-2 text-xl font-semibold text-destructive">Delete Account</h2>
-              <p className="mb-4 text-sm text-gray-600">
-                Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="agree-delete"
-                    checked={agreeToDelete}
-                    onChange={(e) => setAgreeToDelete(e.target.checked)}
-                    className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  <label htmlFor="agree-delete" className="text-sm text-gray-700">
-                    Yes, I agree.
-                  </label>
-                </div>
-                <div className="flex justify-end">
-                  <Button 
-                    variant="destructive"
-                    onClick={handleDeleteAccount}
-                    disabled={isDeleting || !agreeToDelete}
-                    className="rounded-md px-8"
-                  >
-                    {isDeleting ? "Deleting..." : "DELETE"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="notifications" className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight">Notification Preferences</h2>
-              <p className="text-muted-foreground">Manage how you want to be notified about your devices.</p>
-            </div>
-
-            <Card className="p-6 space-y-6">
-              {/* Battery Alerts */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Battery Alerts</h3>
-                    <p className="text-sm text-muted-foreground">Get notified about your device&apos;s battery status. These settings apply to all devices paired with your account.</p>
-                  </div>
-                  <Switch 
-                    id="battery-notifications" 
-                    checked={batteryNotifications}
-                    onCheckedChange={setBatteryNotifications}
-                  />
-                </div>
-                
-                {batteryNotifications && (
-                  <div className="ml-1 space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="battery-full" 
-                        checked={batteryFull}
-                        onCheckedChange={(checked: boolean) => setBatteryFull(checked)}
-                      />
-                      <Label htmlFor="battery-full">Notify when battery is fully charged</Label>
+            <TabsContent value="notifications" className="space-y-6">
+              <Card className="p-6 space-y-6">
+                {/* Battery Alerts */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">Battery Alerts</h3>
+                      <p className="text-sm text-muted-foreground">For device&apos;s battery status. These settings apply to all your devices.</p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="battery-low"
-                        checked={batteryLow}
-                        onCheckedChange={(checked: boolean) => setBatteryLow(checked)}
-                      />
-                      <Label htmlFor="battery-low">Notify when battery drops below 20%</Label>
+                    <Switch 
+                      id="battery-notifications" 
+                      checked={batteryNotifications}
+                      onCheckedChange={setBatteryNotifications}
+                    />
+                  </div>
+                  
+                  {batteryNotifications && (
+                    <div className="ml-1 space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="battery-full" 
+                          checked={batteryFull}
+                          onCheckedChange={(checked: boolean) => setBatteryFull(checked)}
+                        />
+                        <Label htmlFor="battery-full">Notify when battery is fully charged</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="battery-low"
+                          checked={batteryLow}
+                          onCheckedChange={(checked: boolean) => setBatteryLow(checked)}
+                        />
+                        <Label htmlFor="battery-low">Notify when battery drops below 20%</Label>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="h-px bg-border" />
-
-              {/* Moisture Alerts */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Moisture Alerts</h3>
-                    <p className="text-sm text-muted-foreground">Get notified about moisture level changes. These settings apply to all devices paired with your account.</p>
-                  </div>
-                  <Switch 
-                    id="moisture-notifications"
-                    checked={moistureNotifications}
-                    onCheckedChange={setMoistureNotifications}
-                  />
+                  )}
                 </div>
-                
-                {moistureNotifications && (
-                  <div className="ml-1 space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="moisture-dry"
-                        checked={moistureDry}
-                        onCheckedChange={(checked: boolean) => setMoistureDry(checked)}
-                      />
-                      <Label htmlFor="moisture-dry">Notify when item is completely dry</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="moisture-low"
-                        checked={moistureLow}
-                        onCheckedChange={(checked: boolean) => setMoistureLow(checked)}
-                      />
-                      <Label htmlFor="moisture-low">Notify when moisture drops below 20%</Label>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
 
-            <Button onClick={handleSaveNotificationSettings} className="mt-4">
-              Save Settings
-            </Button>
-          </TabsContent>
-        </Tabs>
+                <div className="h-px bg-border" />
+
+                {/* Moisture Alerts */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">Moisture Alerts</h3>
+                      <p className="text-sm text-muted-foreground">For moisture level changes. These settings apply to all your devices.</p>
+                    </div>
+                    <Switch 
+                      id="moisture-notifications"
+                      checked={moistureNotifications}
+                      onCheckedChange={setMoistureNotifications}
+                    />
+                  </div>
+                  
+                  {moistureNotifications && (
+                    <div className="ml-1 space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="moisture-dry"
+                          checked={moistureDry}
+                          onCheckedChange={(checked: boolean) => setMoistureDry(checked)}
+                        />
+                        <Label htmlFor="moisture-dry">Notify when item is completely dry</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="moisture-low"
+                          checked={moistureLow}
+                          onCheckedChange={(checked: boolean) => setMoistureLow(checked)}
+                        />
+                        <Label htmlFor="moisture-low">Notify when moisture drops below 20%</Label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              <Button onClick={handleSaveNotificationSettings} className="mt-4">
+                Save Settings
+              </Button>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   )

@@ -4,7 +4,7 @@ import Link from "next/link"
 
 export default function WelcomePage() {
   const [text, setText] = useState('');
-  const fullText = "we're pinova";
+  const fullText = "we're pintell";
   const [isBlinking, setIsBlinking] = useState(false);
   const [isTyping, setIsTyping] = useState(true);
   const [blinkCount, setBlinkCount] = useState(0);
@@ -89,7 +89,7 @@ export default function WelcomePage() {
         {/* Desktop Layout */}
         <div className="hidden md:block">
           <p className="text-2xl font-bold text-[#5DA9E9] mt-2 mb-10">
-            pinova
+            pintell
           </p>
           <h1 className="text-5xl font-light mb-8">
             Hi, 

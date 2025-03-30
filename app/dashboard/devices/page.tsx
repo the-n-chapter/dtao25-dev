@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Battery, Trash } from "lucide-react"
+import { ChevronLeft, Battery, Trash } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import {
@@ -129,7 +129,7 @@ export default function DevicesPage() {
             onClick={() => router.push("/dashboard")}
             className="text-base"
           >
-            <ArrowLeft className="mr-2 h-5 w-5" />
+            <ChevronLeft className="h-5 w-5" />
             Back
           </Button>
         </div>
@@ -137,7 +137,7 @@ export default function DevicesPage() {
         <div className="space-y-6 px-2 py-4 lg:pl-0 lg:pt-16">
           <div className="mb-6 space-y-2 text-center">
             <h1 className="text-2xl font-bold">My Devices</h1>
-            <p className="text-muted-foreground">Manage your connected SmartPin devices</p>
+            <p className="text-muted-foreground">Manage your connected Pintell devices</p>
           </div>
 
           {error && (

@@ -8,8 +8,8 @@ import { Toaster } from "sonner"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "SmartPin Device Management",
-  description: "Monitor and manage your SmartPin moisture sensors",
+  title: "Pintell",
+  description: "Keep track of your Pintell devices",
 }
 
 export default function RootLayout({

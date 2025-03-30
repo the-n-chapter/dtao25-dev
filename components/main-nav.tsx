@@ -164,7 +164,7 @@ export function MainNav() {
             </SheetContent>
           </Sheet>
           <Link href="/dashboard" className="font-bold text-[#5DA9E9]">
-            pinova
+            pintell
           </Link>
         </div>
 
