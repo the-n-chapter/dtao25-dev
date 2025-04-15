@@ -35,15 +35,15 @@ export default function AddDevicePage() {
             <ol className="space-y-4 list-decimal list-inside">
               <li>Turn on the device.</li>
               <li>
-                Connect your phone or computer to the device&apos;s WiFi network.
+                Connect to the device&apos;s WiFi network with these information.
                 <div className="ml-6 mt-2 space-y-1">
-                  <p><span className="font-medium">Name:</span> SP1234</p>
-                  <p><span className="font-medium">Password:</span> ****</p>
+                  <p><span className="font-medium">Name:</span> Pintell</p>
+                  <p><span className="font-medium">Password:</span> ********</p>
                 </div>
               </li>
-              <li>Next, click the &quot;Open a separate link&quot; button below.</li>
-              <li>A new mini app will open, showing the device&apos;s WiFi selector page.</li>
-              <li>Follow the steps in that mini app to finish connecting the device.</li>
+              <li>After succesful connection, click the &quot;Open a separate link&quot; button below.</li>
+              <li>A mini app will open, showing the device&apos;s WiFi selector page.</li>
+              <li>In this WiFi selector page, choose to connect to your WiFi network.</li>
               <li>Once done, you&apos;ll be redirected back to the main app, and the device will now appear under <Link href="/dashboard/devices" className="text-primary hover:text-primary/80">&quot;View my devices&quot;</Link>.</li>
             </ol>
           </div>
