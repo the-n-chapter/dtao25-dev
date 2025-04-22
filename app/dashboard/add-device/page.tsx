@@ -5,9 +5,27 @@ import { Card } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { toast } from "sonner"
 
 export default function AddDevicePage() {
   const router = useRouter()
+
+  const handleOpenMiniApp = () => {
+    try {
+      const token = localStorage.getItem("authToken")
+      if (!token) {
+        toast.error("Please log in to continue")
+        router.push("/login")
+        return
+      }
+
+      // Open the mini app in the same window
+      window.location.href = `http://192.168.12.34/?token=${token}`
+    } catch (error) {
+      console.error('Failed to get token:', error)
+      toast.error("Failed to open the mini app. Please try again.")
+    }
+  }
 
   return (
     <>
@@ -49,7 +67,12 @@ export default function AddDevicePage() {
           </div>
 
           <div className="mt-6 flex justify-center">
-            <Button className="w-48">Open a separate link</Button>
+            <Button 
+              className="w-48" 
+              onClick={handleOpenMiniApp}
+            >
+              Open a separate link
+            </Button>
           </div>
         </Card>
       </div>
