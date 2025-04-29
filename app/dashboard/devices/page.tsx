@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Battery, Trash } from "lucide-react"
+import { ChevronLeft, Trash } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import {
@@ -20,13 +20,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { getDevices, deleteDevice } from "@/lib/api"
+import { toast } from "react-hot-toast"
 
 type Device = {
   id: string
-  status: "online" | "offline"
-  battery: number
-  moistureLevel: number
-  lastUpdated: string
+  hashedMACAddress: string
+  owner: string
+  datapoints: Array<{
+    value: number
+    createdAt: string
+  }>
 }
 
 export default function DevicesPage() {
@@ -38,42 +42,27 @@ export default function DevicesPage() {
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
 
   useEffect(() => {
-    // Get current user
-    const currentUser = localStorage.getItem("currentUser")
-    if (!currentUser) {
-      router.push("/login")
-      return
+    const fetchDevices = async () => {
+      try {
+        // Check if user is authenticated
+        const token = localStorage.getItem("authToken")
+        if (!token) {
+          router.push("/login")
+          return
+        }
+
+        // Fetch devices from API
+        const fetchedDevices = await getDevices()
+        setDevices(fetchedDevices)
+      } catch (err) {
+        console.error("Error fetching devices:", err)
+        setError("Failed to load devices")
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Load devices
-    const userDevicesKey = `${currentUser}-devices`
-    const storedDevices = localStorage.getItem(userDevicesKey)
-
-    if (storedDevices) {
-      setDevices(JSON.parse(storedDevices))
-    } else {
-      // Create mock devices if none exist
-      const mockDevices: Device[] = [
-        {
-          id: "SP-001",
-          status: "online",
-          battery: 85,
-          moistureLevel: 42,
-          lastUpdated: new Date().toISOString(),
-        },
-        {
-          id: "SP-002",
-          status: "offline",
-          battery: 12,
-          moistureLevel: 78,
-          lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-        },
-      ]
-      setDevices(mockDevices)
-      localStorage.setItem(userDevicesKey, JSON.stringify(mockDevices))
-    }
-
-    setLoading(false)
+    fetchDevices()
   }, [router])
 
   const confirmRemoveDevice = (deviceId: string, e: React.MouseEvent) => {
@@ -82,22 +71,25 @@ export default function DevicesPage() {
     setShowRemoveDialog(true)
   }
 
-  const handleRemoveDevice = () => {
+  const handleRemoveDevice = async () => {
     try {
       if (!deviceToRemove) return
 
-      const currentUser = localStorage.getItem("currentUser")
-      if (!currentUser) {
+      const token = localStorage.getItem("authToken")
+      if (!token) {
         throw new Error("User not authenticated")
       }
 
-      const userDevicesKey = `${currentUser}-devices`
-      const updatedDevices = devices.filter((device) => device.id !== deviceToRemove)
-
-      setDevices(updatedDevices)
-      localStorage.setItem(userDevicesKey, JSON.stringify(updatedDevices))
+      // Delete device using API
+      await deleteDevice(parseInt(deviceToRemove), token)
+      
+      // Update local state
+      setDevices(devices.filter((device) => device.id !== deviceToRemove))
       setShowRemoveDialog(false)
       setDeviceToRemove(null)
+      
+      // Show success message
+      toast.success("Device removed successfully")
     } catch (err) {
       setError("Failed to remove device")
       console.error(err)
@@ -113,10 +105,12 @@ export default function DevicesPage() {
     router.push(`/dashboard/device-details/${deviceId}`)
   }
 
-  const getBatteryColor = (level: number) => {
-    if (level > 50) return "text-green-500"
-    if (level > 20) return "text-yellow-500"
-    return "text-red-500"
+  // Get the latest datapoint for a device
+  const getLatestDatapoint = (device: Device) => {
+    if (!device.datapoints || device.datapoints.length === 0) {
+      return { value: 0, createdAt: new Date().toISOString() }
+    }
+    return device.datapoints[device.datapoints.length - 1]
   }
 
   return (
@@ -161,56 +155,58 @@ export default function DevicesPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {/* Device rows */}
-              {devices.map((device) => (
-                <div
-                  key={device.id}
-                  className="flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 hover:shadow-md hover:border-[#5DA9E9] w-full lg:mx-auto lg:max-w-[66%]"
-                >
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {/* Device ID */}
-                    <TooltipProvider delayDuration={100}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium cursor-pointer hover:bg-[#4A98D8]"
-                            onClick={() => navigateToDeviceDetails(device.id)}
-                          >
-                            {device.id}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-white text-black border shadow-sm">
-                          <p>Click to view moisture data</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    {/* Status */}
-                    <div className="flex items-center">
-                      <div
-                        className={`h-3 w-3 rounded-full mr-2 ${device.status === "online" ? "bg-green-500" : "bg-gray-400"}`}
-                      />
-                      <span className="text-sm">{device.status === "online" ? "Online" : "Offline"}</span>
-                    </div>
-                    
-                    {/* Battery */}
-                    <div className="flex items-center">
-                      <Battery className={`h-5 w-5 mr-1 ${getBatteryColor(device.battery)}`} />
-                      <span className="text-sm font-medium">{device.battery}%</span>
-                    </div>
-                  </div>
-                  
-                  {/* Remove Action */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive/80 shrink-0"
-                    onClick={(e) => confirmRemoveDevice(device.id, e)}
+              {devices.map((device) => {
+                const latestDatapoint = getLatestDatapoint(device)
+                const moistureLevel = latestDatapoint.value
+                const lastUpdated = latestDatapoint.createdAt
+                
+                return (
+                  <div
+                    key={device.id}
+                    className="flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 hover:shadow-md hover:border-[#5DA9E9] w-full lg:mx-auto lg:max-w-[66%]"
                   >
-                    <Trash className="mr-1 h-4 w-4" />
-                    <span className="hidden sm:inline">Remove</span>
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {/* Device ID */}
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium cursor-pointer hover:bg-[#4A98D8]"
+                              onClick={() => navigateToDeviceDetails(device.id)}
+                            >
+                              {device.hashedMACAddress}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-white text-black border shadow-sm">
+                            <p>Click to view moisture data</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      {/* Moisture Level */}
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium">{moistureLevel}%</span>
+                      </div>
+                      
+                      {/* Last Updated */}
+                      <div className="text-sm text-muted-foreground">
+                        Updated: {new Date(lastUpdated).toLocaleString()}
+                      </div>
+                    </div>
+                    
+                    {/* Remove Action */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive/80 shrink-0"
+                      onClick={(e) => confirmRemoveDevice(device.id, e)}
+                    >
+                      <Trash className="mr-1 h-4 w-4" />
+                      <span className="hidden sm:inline">Remove</span>
+                    </Button>
+                  </div>
+                )
+              })}
             </div>
           )}
 

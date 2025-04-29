@@ -6,12 +6,24 @@ import { ChevronLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
+import { useEffect, useState } from "react"
 
 export default function AddDevicePage() {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleOpenMiniApp = () => {
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem("authToken")
+    if (!token) {
+      toast.error("Please log in to continue")
+      router.push("/login")
+    }
+  }, [router])
+
+  const handleOpenMiniApp = async () => {
     try {
+      setIsLoading(true)
       const token = localStorage.getItem("authToken")
       if (!token) {
         toast.error("Please log in to continue")
@@ -19,11 +31,13 @@ export default function AddDevicePage() {
         return
       }
 
-      // Open the mini app in the same window
+      // Open the mini app in the same window with the token
       window.location.href = `http://192.168.12.34/?token=${token}`
     } catch (error) {
-      console.error('Failed to get token:', error)
+      console.error('Failed to open mini app:', error)
       toast.error("Failed to open the mini app. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -52,13 +66,7 @@ export default function AddDevicePage() {
           <div className="max-w-lg">
             <ol className="space-y-4 list-decimal list-inside">
               <li>Turn on the device.</li>
-              <li>
-                Connect to the device&apos;s WiFi network with these information.
-                <div className="ml-6 mt-2 space-y-1">
-                  <p><span className="font-medium">Name:</span> Pintell</p>
-                  <p><span className="font-medium">Password:</span> ********</p>
-                </div>
-              </li>
+              <li>Connect to the device&apos;s WiFi network with the information on the package.</li>
               <li>After succesful connection, click the &quot;Open a separate link&quot; button below.</li>
               <li>A mini app will open, showing the device&apos;s WiFi selector page.</li>
               <li>In this WiFi selector page, choose to connect to your WiFi network.</li>
@@ -70,8 +78,9 @@ export default function AddDevicePage() {
             <Button 
               className="w-48" 
               onClick={handleOpenMiniApp}
+              disabled={isLoading}
             >
-              Open a separate link
+              {isLoading ? "Opening..." : "Open a separate link"}
             </Button>
           </div>
         </Card>

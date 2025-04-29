@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "@/components/chart"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { getDeviceById, getDatapointsByDeviceId, startSession } from "@/lib/api"
+import { getDeviceById, getCurrentSessionDatapoints, startSession } from "@/lib/api"
 
 type Device = {
   id: string
@@ -25,6 +25,14 @@ type MoistureData = {
   value: number
 }
 
+type SessionData = {
+  averageSlope: number
+  datapoints: Array<{
+    value: number
+    createdAt: string
+  }>
+}
+
 export default function DeviceDetailsPage() {
   const router = useRouter()
   const params = useParams()
@@ -32,13 +40,14 @@ export default function DeviceDetailsPage() {
 
   const [device, setDevice] = useState<Device | null>(null)
   const [moistureHistory, setMoistureHistory] = useState<MoistureData[]>([])
+  const [currentSession, setCurrentSession] = useState<SessionData | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [showPercentage, setShowPercentage] = useState(true)
 
   const fetchDeviceData = async () => {
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("authToken")
       if (!token) {
         router.push("/login")
         return
@@ -48,11 +57,12 @@ export default function DeviceDetailsPage() {
       const deviceData = await getDeviceById(deviceId)
       setDevice(deviceData)
 
-      // Get datapoints for the device
-      const datapoints = await getDatapointsByDeviceId(deviceId)
+      // Get current session data
+      const sessionData = await getCurrentSessionDatapoints(deviceId, token)
+      setCurrentSession(sessionData)
       
-      // Transform datapoints into moisture history format
-      const history = datapoints.map((dp: { value: number; createdAt: string }) => ({
+      // Transform session datapoints into moisture history format
+      const history = sessionData.datapoints.map((dp: { value: number; createdAt: string }) => ({
         timestamp: dp.createdAt,
         value: dp.value
       }))
@@ -73,7 +83,7 @@ export default function DeviceDetailsPage() {
   const handleRefresh = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("authToken")
       if (!token) {
         router.push("/login")
         return
@@ -133,9 +143,9 @@ export default function DeviceDetailsPage() {
     )
   }
 
-  // Get the latest moisture value from datapoints
-  const currentMoistureLevel = device.datapoints[device.datapoints.length - 1]?.value || 0
-  const lastUpdated = device.datapoints[device.datapoints.length - 1]?.createdAt || new Date().toISOString()
+  // Get the latest moisture value from current session
+  const currentMoistureLevel = currentSession?.datapoints[currentSession.datapoints.length - 1]?.value || 0
+  const lastUpdated = currentSession?.datapoints[currentSession.datapoints.length - 1]?.createdAt || new Date().toISOString()
 
   return (
     <div className="relative">

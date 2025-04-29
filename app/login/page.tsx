@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Eye, EyeOff } from "lucide-react"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { login, getUsers } from "@/lib/api"
+import { login, getMyProfile } from "@/lib/api"
 
 // Define the validation schema with Zod
 const loginSchema = z.object({
@@ -44,17 +44,13 @@ export default function LoginPage() {
       // Save the token to localStorage for future authenticated requests
       localStorage.setItem("authToken", token)
 
-      // Get user data from API
-      const users = await getUsers()
-      const user = users.find(u => u.username === values.username)
-      if (!user) {
-        throw new Error("User not found")
-      }
-
+      // Get user profile data
+      const userProfile = await getMyProfile(token)
+      
       // Store user data as a JSON object
       localStorage.setItem("currentUser", JSON.stringify({
-        id: user.id,
-        username: values.username
+        id: userProfile.id,
+        username: userProfile.username
       }))
 
       toast.success("Login successful! Redirecting to Dashboard...")

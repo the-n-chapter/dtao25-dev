@@ -80,8 +80,12 @@ export const deleteDevice = async (id: number, token: string) => {
 };
 
 // Datapoint APIs
-export const createDatapoint = async ({ value, deviceHashedMACAddress }: { value: number; deviceHashedMACAddress: string }) => {
-  const { data } = await axios.post(`${API_BASE_URL}/datapoints`, { value, deviceHashedMACAddress }, { headers: headers() });
+export const createDatapoint = async ({ value, deviceHashedMACAddress, battery }: { value: number; deviceHashedMACAddress: string; battery: number }) => {
+  const { data } = await axios.post(
+    `${API_BASE_URL}/datapoints`,
+    { value, deviceHashedMACAddress, battery },
+    { headers: headers() }
+  );
   const { id, value: createdValue, deviceHashedMACAddress: createdReceiveFrom } = data;
   return { id, value: createdValue, deviceHashedMACAddress: createdReceiveFrom };
 };
@@ -99,6 +103,12 @@ export const startSession = async (deviceId: number, token: string) => {
   );
   const { id, value, deviceHashedMACAddress } = data;
   return { id, value, deviceHashedMACAddress };
+};
+
+export const getCurrentSessionDatapoints = async (deviceId: number, token: string) => {
+  const { data } = await axios.get(`${API_BASE_URL}/datapoints/currentsession/${deviceId}`, { headers: headers(token) });
+  const { averageSlope, datapoints } = data;
+  return { averageSlope, datapoints };
 };
 
 // Admin APIs

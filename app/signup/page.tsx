@@ -47,19 +47,10 @@ export default function SignupPage() {
 
     try {
       // Call the createUser API
-      const user = await createUser({
+      await createUser({
         username: values.username,
         password: values.password,
       })
-
-      // Store user data in local storage
-      const users = JSON.parse(localStorage.getItem("users") || "[]")
-      users.push({
-        id: user.id,
-        username: values.username,
-        password: values.password
-      })
-      localStorage.setItem("users", JSON.stringify(users))
       
       toast.success("Signup successful! Redirecting to Login...")
 
