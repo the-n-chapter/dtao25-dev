@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "@/components/chart"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { getDeviceById, getCurrentSessionDatapoints, startSession } from "@/lib/api"
+import { getDeviceById, getCurrentSessionDatapoints, startSession } from "@/lib/front_end_api_service"
 
 type Device = {
   id: string
@@ -149,22 +149,22 @@ export default function DeviceDetailsPage() {
 
   return (
     <div className="relative">
-      <div className="absolute left-4 top-0">
+      <div className="relative mb-5 mt-5 ml-5 md:mb-5 lg:absolute lg:mb-0 lg:mt-0 lg:top-0">
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={() => router.push("/dashboard/devices")}
           className="text-base"
         >
-          <ArrowLeft className="mr-2 h-5 w-5" />
+          <ChevronLeft className="h-5 w-5" />
           Back
         </Button>
       </div>
 
       <div className="container mx-auto max-w-4xl lg:max-w-2xl p-4 md:p-6 mt-5">
-        <div className="mb-6 space-y-2 flex justify-center">
+        <div className="mb-3 space-y-2 flex justify-center mt-3">
           <div className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium hover:bg-[#4A98D8]">
-            {device.hashedMACAddress}
+            Device {device.id}
           </div>
         </div>
 

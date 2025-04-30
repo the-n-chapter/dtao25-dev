@@ -50,7 +50,7 @@ export default function AddDevicePage() {
             className="flex items-center text-base gap-1"
             onClick={() => router.back()}
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-5 w-5 mr-1" />
             Back
           </Button>
         </div>
@@ -68,8 +68,8 @@ export default function AddDevicePage() {
               <li>Turn on the device.</li>
               <li>Connect to the device&apos;s WiFi network with the information on the package.</li>
               <li>After succesful connection, click the &quot;Open a mini app&quot; button below.</li>
-              <li>This mini app should show a WiFi selector page. Choose to connect to your WiFi network.</li>
-              <li>Once done, you&apos;ll be redirected back to this page, and the device will now appear under <Link href="/dashboard/devices" className="text-primary hover:text-primary/80">&quot;View my devices&quot;</Link>.</li>
+              <li>Follow the instructions on the mini app.</li>
+              <li>Once done, you&apos;ll be redirected back to this page. The device should now appear under <Link href="/dashboard/devices" className="text-primary hover:text-primary/80">&quot;View my devices&quot;</Link>.</li>
             </ol>
           </div>
 

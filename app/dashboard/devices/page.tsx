@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getDevices, deleteDevice } from "@/lib/api"
+import { getMyProfile, deleteDevice } from "@/lib/front_end_api_service"
 import { toast } from "react-hot-toast"
 
 type Device = {
@@ -51,9 +51,9 @@ export default function DevicesPage() {
           return
         }
 
-        // Fetch devices from API with authentication token
-        const fetchedDevices = await getDevices(token)
-        setDevices(fetchedDevices)
+        // Fetch user profile which includes their devices
+        const { devices: userDevices } = await getMyProfile(token)
+        setDevices(userDevices || [])
       } catch (err) {
         console.error("Error fetching devices:", err)
         setError("Failed to load devices")
@@ -116,7 +116,7 @@ export default function DevicesPage() {
   return (
     <div className="relative">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-3xl">
-        <div className="relative mb-5 mt-5 md:mb-5 md:mt-5 lg:absolute lg:left-8 lg:mb-0 lg:mt-0 lg:top-3">
+        <div className="relative mb-5 mt-5 md:mb-5 md:mt-5 lg:absolute lg:left-5 lg:mb-0 lg:mt-2 lg:top-3">
           <Button 
             variant="ghost" 
             size="sm" 
@@ -131,7 +131,7 @@ export default function DevicesPage() {
         <div className="space-y-6 px-2 py-4 lg:pl-0 lg:pt-16">
           <div className="mb-6 space-y-2 text-center">
             <h1 className="text-2xl font-bold">My Devices</h1>
-            <p className="text-muted-foreground">Manage your connected Pintell devices</p>
+            <p className="text-muted-foreground">Manage your Pintell devices</p>
           </div>
 
           {error && (
@@ -161,50 +161,44 @@ export default function DevicesPage() {
                 const lastUpdated = latestDatapoint.createdAt
                 
                 return (
-                  <div
-                    key={device.id}
-                    className="flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 hover:shadow-md hover:border-[#5DA9E9] w-full lg:mx-auto lg:max-w-[66%]"
-                  >
-                    <div className="flex items-center gap-4 flex-wrap">
-                      {/* Device ID */}
-                      <TooltipProvider delayDuration={100}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium cursor-pointer hover:bg-[#4A98D8]"
-                              onClick={() => navigateToDeviceDetails(device.id)}
-                            >
-                              {device.hashedMACAddress}
+                  <TooltipProvider delayDuration={100} key={device.id}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 hover:shadow-md hover:border-[#5DA9E9] w-full lg:mx-auto lg:max-w-[66%] cursor-pointer"
+                          onClick={() => navigateToDeviceDetails(device.id)}
+                        >
+                          <div className="flex items-center gap-4 flex-wrap">
+                            {/* Device ID */}
+                            <div className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium hover:bg-[#4A98D8]">
+                              Device {device.id}
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-white text-black border shadow-sm">
-                            <p>Click to view moisture data</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      {/* Moisture Level */}
-                      <div className="flex items-center">
-                        <span className="text-sm font-medium">{moistureLevel}%</span>
-                      </div>
-                      
-                      {/* Last Updated */}
-                      <div className="text-sm text-muted-foreground">
-                        Updated: {new Date(lastUpdated).toLocaleString()}
-                      </div>
-                    </div>
-                    
-                    {/* Remove Action */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive/80 shrink-0"
-                      onClick={(e) => confirmRemoveDevice(device.id, e)}
-                    >
-                      <Trash className="mr-1 h-4 w-4" />
-                      <span className="hidden sm:inline">Remove</span>
-                    </Button>
-                  </div>
+                            {/* Moisture Level */}
+                            <div className="flex items-center">
+                              <span className="text-sm font-medium">{moistureLevel}%</span>
+                            </div>
+                            {/* Last Updated */}
+                            <div className="text-sm text-muted-foreground">
+                              Updated: {new Date(lastUpdated).toLocaleString()}
+                            </div>
+                          </div>
+                          {/* Remove Action */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive/80 shrink-0"
+                            onClick={(e) => confirmRemoveDevice(device.id, e)}
+                          >
+                            <Trash className="mr-1 h-4 w-4" />
+                            <span className="hidden sm:inline">Remove</span>
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-white text-black border shadow-sm">
+                        <p>Click to view moisture data</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )
               })}
             </div>

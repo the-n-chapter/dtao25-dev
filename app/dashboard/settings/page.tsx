@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, Eye, EyeOff } from 'lucide-react'
-import { deleteUser } from '@/lib/api'
+import { AlertCircle } from 'lucide-react'
+import { deleteUser } from '@/lib/front_end_api_service'
 import type { ApiErrorResponse } from '@/lib/types'
 import { toast } from 'sonner'
 import { Checkbox } from "@/components/ui/checkbox"
@@ -27,8 +27,6 @@ interface LocalUser extends User {
 export default function SettingsPage() {
   const router = useRouter()
   const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -79,7 +77,7 @@ export default function SettingsPage() {
         const users = JSON.parse(usersStr) as LocalUser[]
         const userWithPassword = users.find(u => u.username === user.username)
         if (userWithPassword) {
-          setPassword(userWithPassword.password)
+          // Password is stored but not used in the UI
         }
       }
 

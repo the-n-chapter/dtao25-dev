@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Eye, EyeOff } from "lucide-react"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { login, getMyProfile } from "@/lib/api"
+import { login, getMyProfile } from "@/lib/front_end_api_service"
 
 // Define the validation schema with Zod
 const loginSchema = z.object({

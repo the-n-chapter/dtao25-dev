@@ -2,5 +2,5 @@
 export * from "./types"
 
 // Export API functions
-export * from "./api"
+export * from "./front_end_api_service"
 

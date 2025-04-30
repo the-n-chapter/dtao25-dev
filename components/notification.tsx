@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { getDevices } from "@/lib/api"
+import { getDevices } from "@/lib/front_end_api_service"
 
 type Notification = {
   id: number
