@@ -51,8 +51,8 @@ export default function DevicesPage() {
           return
         }
 
-        // Fetch devices from API
-        const fetchedDevices = await getDevices()
+        // Fetch devices from API with authentication token
+        const fetchedDevices = await getDevices(token)
         setDevices(fetchedDevices)
       } catch (err) {
         console.error("Error fetching devices:", err)

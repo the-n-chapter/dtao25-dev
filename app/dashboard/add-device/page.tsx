@@ -64,23 +64,22 @@ export default function AddDevicePage() {
 
         <Card className="p-6">
           <div className="max-w-lg">
-            <ol className="space-y-4 list-decimal list-inside">
+            <ol className="space-y-4 list-decimal list-inside text-sm md:text-base">
               <li>Turn on the device.</li>
               <li>Connect to the device&apos;s WiFi network with the information on the package.</li>
-              <li>After succesful connection, click the &quot;Open a separate link&quot; button below.</li>
-              <li>A mini app will open, showing the device&apos;s WiFi selector page.</li>
-              <li>In this WiFi selector page, choose to connect to your WiFi network.</li>
-              <li>Once done, you&apos;ll be redirected back to the main app, and the device will now appear under <Link href="/dashboard/devices" className="text-primary hover:text-primary/80">&quot;View my devices&quot;</Link>.</li>
+              <li>After succesful connection, click the &quot;Open a mini app&quot; button below.</li>
+              <li>This mini app should show a WiFi selector page. Choose to connect to your WiFi network.</li>
+              <li>Once done, you&apos;ll be redirected back to this page, and the device will now appear under <Link href="/dashboard/devices" className="text-primary hover:text-primary/80">&quot;View my devices&quot;</Link>.</li>
             </ol>
           </div>
 
           <div className="mt-6 flex justify-center">
             <Button 
-              className="w-48" 
+              className="w-36" 
               onClick={handleOpenMiniApp}
               disabled={isLoading}
             >
-              {isLoading ? "Opening..." : "Open a separate link"}
+              {isLoading ? "Opening..." : "Open a mini app"}
             </Button>
           </div>
         </Card>
