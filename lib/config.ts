@@ -10,12 +10,6 @@ export const MOCK_API_DELAY = 500
 export const STORAGE_KEYS = {
   AUTH_TOKEN: "authToken",
   CURRENT_USER: "currentUser",
-  USERS: "users",
-  DEVICES: "devices",
-  DATAPOINTS: "datapoints",
-  USER_ID_COUNTER: "userIdCounter",
-  DEVICE_ID_COUNTER: "deviceIdCounter",
-  DATAPOINT_ID_COUNTER: "datapointIdCounter",
 }
 
 // Helper to simulate API delay

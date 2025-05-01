@@ -25,10 +25,6 @@ interface User {
   username: string
 }
 
-interface LocalUser extends User {
-  password: string
-}
-
 interface TagDropdownProps {
   options: string[]
   selectedTags: string[]
@@ -153,16 +149,6 @@ export default function SettingsPage() {
       setUsername(user.username)
       setIsAuthenticated(true)
 
-      // Get password from local storage
-      const usersStr = localStorage.getItem('users')
-      if (usersStr) {
-        const users = JSON.parse(usersStr) as LocalUser[]
-        const userWithPassword = users.find(u => u.username === user.username)
-        if (userWithPassword) {
-          // Password is stored but not used in the UI
-        }
-      }
-
       // Load notification settings
       const notificationSettings = localStorage.getItem(`${user.username}-notifications`)
       if (notificationSettings) {
@@ -239,14 +225,6 @@ export default function SettingsPage() {
           return
         }
         throw apiError
-      }
-
-      // Update local storage
-      const usersStr = localStorage.getItem('users')
-      if (usersStr) {
-        const users = JSON.parse(usersStr) as LocalUser[]
-        const updatedUsers = users.filter((u) => u.username !== currentUser.username)
-        localStorage.setItem('users', JSON.stringify(updatedUsers))
       }
 
       toast.success('Account deleted successfully')
