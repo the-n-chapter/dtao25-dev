@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { toast } from "sonner"
 import { useEffect, useState } from "react"
 
@@ -59,17 +58,21 @@ export default function AddDevicePage() {
       <div className="container max-w-xl py-8 space-y-5 mt-8">
         <div className="space-y-2 text-center">
           <h2 className="text-2xl font-semibold tracking-tight">Add New Device</h2>
-          <p className="text-muted-foreground">Follow these steps to connect your device</p>
+          <p className="text-muted-foreground">Follow the instructions closely to set up your devices</p>
         </div>
 
         <Card className="p-6">
           <div className="max-w-lg">
             <ol className="space-y-4 list-decimal list-inside text-sm md:text-base">
-              <li>Turn on the device.</li>
-              <li>Connect to the device&apos;s WiFi network with the information on the package.</li>
-              <li>After succesful connection, click the &quot;Open a mini app&quot; button below.</li>
-              <li>Follow the instructions on the mini app.</li>
-              <li>Once done, you&apos;ll be redirected back to this page. The device should now appear under <Link href="/dashboard/devices" className="text-primary hover:text-primary/80">&quot;View my devices&quot;</Link>.</li>
+              <li>Turn on the Pintell device.</li>
+              <li>
+                Connect to the Pintell device&apos;s Wi-Fi.
+                <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
+                  <li>Go to your Wi-Fi settings.</li>
+                  <li>Enter the network name and password listed on the device&apos;s packaging.</li>
+                  <li>Once connected, click the button below.</li>
+                </ul>
+              </li>
             </ol>
           </div>
 
@@ -79,7 +82,7 @@ export default function AddDevicePage() {
               onClick={handleOpenMiniApp}
               disabled={isLoading}
             >
-              {isLoading ? "Opening..." : "Open a mini app"}
+              {isLoading ? "Opening..." : "Open a Mini App"}
             </Button>
           </div>
         </Card>
