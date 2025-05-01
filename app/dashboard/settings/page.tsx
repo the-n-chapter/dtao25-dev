@@ -8,12 +8,17 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, X, ChevronDown } from 'lucide-react'
 import { deleteUser } from '@/lib/front_end_api_service'
 import type { ApiErrorResponse } from '@/lib/types'
 import { toast } from 'sonner'
-import { Checkbox } from "@/components/ui/checkbox"
 import { Card } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface User {
   id: number
@@ -22,6 +27,64 @@ interface User {
 
 interface LocalUser extends User {
   password: string
+}
+
+interface TagDropdownProps {
+  options: string[]
+  selectedTags: string[]
+  onSelect: (tag: string) => void
+  onRemove: (tag: string) => void
+}
+
+const TagDropdown: React.FC<TagDropdownProps> = ({
+  options,
+  selectedTags,
+  onSelect,
+  onRemove,
+}) => {
+  return (
+    <div className="w-full">
+      <div className="w-[180px]">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <div className="flex items-center gap-2">
+                <ChevronDown className="h-4 w-4" />
+                <span>Select threshold</span>
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-[180px]">
+            {options.map((option) => (
+              <DropdownMenuItem
+                key={option}
+                onClick={() => onSelect(option)}
+                className="cursor-pointer"
+              >
+                {option}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="flex flex-wrap gap-3 mt-2">
+        {selectedTags.map((tag) => (
+          <div
+            key={tag}
+            className="flex items-center gap-1 bg-primary/10 text-primary rounded-md px-3 py-1"
+          >
+            <span className="text-sm">{tag}</span>
+            <button
+              onClick={() => onRemove(tag)}
+              className="hover:bg-primary/20 rounded-md"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function SettingsPage() {
@@ -33,19 +96,38 @@ export default function SettingsPage() {
 
   // Notification settings
   const [moistureNotifications, setMoistureNotifications] = useState(true)
-  const [moistureThreshold, setMoistureThreshold] = useState(20)
   const [batteryNotifications, setBatteryNotifications] = useState(true)
-  const [batteryThreshold, setBatteryThreshold] = useState(15)
-  const [batteryFull, setBatteryFull] = useState(true)
-  const [batteryLow, setBatteryLow] = useState(true)
-  const [moistureDry, setMoistureDry] = useState(true)
-  const [moistureLow, setMoistureLow] = useState(true)
+  const [selectedBatteryTags, setSelectedBatteryTags] = useState<string[]>([])
+  const [selectedMoistureTags, setSelectedMoistureTags] = useState<string[]>([])
+
+  const batteryOptions = ['100%', '50%', '0%']
+  const moistureOptions = ['100%', '75%', '50%', '25%', '0%']
 
   // Delete account
   const [isDeleting, setIsDeleting] = useState(false)
   const [agreeToDelete, setAgreeToDelete] = useState(false)
 
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+
+  const handleBatteryTagSelect = (tag: string) => {
+    if (!selectedBatteryTags.includes(tag)) {
+      setSelectedBatteryTags([...selectedBatteryTags, tag])
+    }
+  }
+
+  const handleBatteryTagRemove = (tag: string) => {
+    setSelectedBatteryTags(selectedBatteryTags.filter(t => t !== tag))
+  }
+
+  const handleMoistureTagSelect = (tag: string) => {
+    if (!selectedMoistureTags.includes(tag)) {
+      setSelectedMoistureTags([...selectedMoistureTags, tag])
+    }
+  }
+
+  const handleMoistureTagRemove = (tag: string) => {
+    setSelectedMoistureTags(selectedMoistureTags.filter(t => t !== tag))
+  }
 
   useEffect(() => {
     // Check authentication
@@ -87,13 +169,9 @@ export default function SettingsPage() {
         try {
           const settings = JSON.parse(notificationSettings)
           setMoistureNotifications(settings.moistureNotifications)
-          setMoistureThreshold(settings.moistureThreshold)
           setBatteryNotifications(settings.batteryNotifications)
-          setBatteryThreshold(settings.batteryThreshold)
-          setBatteryFull(settings.batteryFull)
-          setBatteryLow(settings.batteryLow)
-          setMoistureDry(settings.moistureDry)
-          setMoistureLow(settings.moistureLow)
+          setSelectedBatteryTags(settings.selectedBatteryTags || [])
+          setSelectedMoistureTags(settings.selectedMoistureTags || [])
         } catch (err) {
           console.error('Error parsing notification settings:', err)
         }
@@ -114,13 +192,9 @@ export default function SettingsPage() {
     try {
       const settings = {
         moistureNotifications,
-        moistureThreshold,
         batteryNotifications,
-        batteryThreshold,
-        batteryFull,
-        batteryLow,
-        moistureDry,
-        moistureLow,
+        selectedBatteryTags,
+        selectedMoistureTags,
       }
 
       localStorage.setItem(`${username}-notifications`, JSON.stringify(settings))
@@ -278,83 +352,62 @@ export default function SettingsPage() {
 
             <TabsContent value="notifications" className="space-y-6">
               <Card className="p-6 space-y-6">
-                {/* Battery Alerts */}
+                <p className="text-sm text-muted-foreground mb-4">
+                  The settings are applied to <span className="font-bold">all</span> the devices connected to your account.
+                </p>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Battery Alerts</h3>
-                      <p className="text-sm text-muted-foreground">For device&apos;s battery status. These settings apply to all your devices.</p>
+                    <div className="space-y-0.5">
+                      <Label>Battery Alerts</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Get notified about battery levels
+                      </div>
                     </div>
-                    <Switch 
-                      id="battery-notifications" 
+                    <Switch
                       checked={batteryNotifications}
                       onCheckedChange={setBatteryNotifications}
                     />
                   </div>
-                  
                   {batteryNotifications && (
-                    <div className="ml-1 space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="battery-full" 
-                          checked={batteryFull}
-                          onCheckedChange={(checked: boolean) => setBatteryFull(checked)}
-                        />
-                        <Label htmlFor="battery-full">Notify when battery is fully charged</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="battery-low"
-                          checked={batteryLow}
-                          onCheckedChange={(checked: boolean) => setBatteryLow(checked)}
-                        />
-                        <Label htmlFor="battery-low">Notify when battery drops below 20%</Label>
-                      </div>
+                    <div>
+                      <TagDropdown
+                        options={batteryOptions}
+                        selectedTags={selectedBatteryTags}
+                        onSelect={handleBatteryTagSelect}
+                        onRemove={handleBatteryTagRemove}
+                      />
                     </div>
                   )}
                 </div>
 
-                <div className="h-px bg-border" />
-
-                {/* Moisture Alerts */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Moisture Alerts</h3>
-                      <p className="text-sm text-muted-foreground">For moisture level changes. These settings apply to all your devices.</p>
+                    <div className="space-y-0.5">
+                      <Label>Moisture Alerts</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Get notified about moisture levels
+                      </div>
                     </div>
-                    <Switch 
-                      id="moisture-notifications"
+                    <Switch
                       checked={moistureNotifications}
                       onCheckedChange={setMoistureNotifications}
                     />
                   </div>
-                  
                   {moistureNotifications && (
-                    <div className="ml-1 space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="moisture-dry"
-                          checked={moistureDry}
-                          onCheckedChange={(checked: boolean) => setMoistureDry(checked)}
-                        />
-                        <Label htmlFor="moisture-dry">Notify when item is completely dry</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="moisture-low"
-                          checked={moistureLow}
-                          onCheckedChange={(checked: boolean) => setMoistureLow(checked)}
-                        />
-                        <Label htmlFor="moisture-low">Notify when moisture drops below 20%</Label>
-                      </div>
+                    <div>
+                      <TagDropdown
+                        options={moistureOptions}
+                        selectedTags={selectedMoistureTags}
+                        onSelect={handleMoistureTagSelect}
+                        onRemove={handleMoistureTagRemove}
+                      />
                     </div>
                   )}
                 </div>
               </Card>
 
               <Button onClick={handleSaveNotificationSettings} className="mt-4">
-                Save Settings
+                Save Changes
               </Button>
             </TabsContent>
           </Tabs>
