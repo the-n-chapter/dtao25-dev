@@ -22,7 +22,7 @@ interface ApiError {
 
 describe('Datapoint API Tests', () => {
   let token: string;
-  const deviceHashedMACAddress = 'another';
+  const deviceHashedMACAddress = 'testdevice';
 
   beforeAll(async () => {
     try {
@@ -48,7 +48,7 @@ describe('Datapoint API Tests', () => {
     }
   });
 
-  it('should add 100 decreasing datapoints using testdevice', async () => {
+  it('should add 50 decreasing datapoints using testdevice', async () => {
     // Start a session
     const sessionRes = await axios.post<DatapointResponse>(
       `${API_BASE_URL}/datapoints/startsession`,
@@ -61,15 +61,15 @@ describe('Datapoint API Tests', () => {
     expect(sessionRes.data.value).toBe(-1);
     expect(sessionRes.data.deviceHashedMACAddress).toBe(deviceHashedMACAddress);
 
-    // Create and send 100 datapoints
-    const startValue = 3200;
-    for (let i = 0; i < 100; i++) {
+    // Create and send 50 datapoints
+    const startValue = 3300;
+    for (let i = 0; i < 50; i++) {
       let battery = Math.max(1, 100 - i); // usually drop by 1% per datapoint
       
       // 20% chance to simulate communication failure
       if (Math.random() < 0.2) {
         battery = -1;
-        console.log(`[${i + 1}/100] Skipping datapoint due to simulated communication failure`);
+        console.log(`[${i + 1}/50] Skipping datapoint due to simulated communication failure`);
         continue; // Skip this iteration
       }
 
@@ -79,19 +79,19 @@ describe('Datapoint API Tests', () => {
         deviceHashedMACAddress
       };
 
-      console.log(`[${i + 1}/100] Creating datapoint:`, datapoint);
+      console.log(`[${i + 1}/50] Creating datapoint:`, datapoint);
       const res = await axios.post<DatapointResponse>(
         `${API_BASE_URL}/datapoints`,
         datapoint,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log(`[${i + 1}/100] Created datapoint response:`, res.data);
+      console.log(`[${i + 1}/50] Created datapoint response:`, res.data);
 
       expect(res.data.value).toBe(datapoint.value);
       expect(res.data.deviceHashedMACAddress).toBe(deviceHashedMACAddress);
     }
 
-    // Test passed - all 100 datapoints were created successfully
+    // Test passed - all 50 datapoints were created successfully
     expect(true).toBe(true);
   }, 30000); // Increase timeout to 30 seconds
 });

@@ -20,11 +20,6 @@ type Device = {
   }>
 }
 
-type MoistureData = {
-  timestamp: string
-  value: number
-}
-
 type SessionData = {
   averageSlope: number
   datapoints: Array<{
@@ -39,7 +34,6 @@ export default function DeviceDetailsPage() {
   const deviceId = parseInt(params.id as string, 10)
 
   const [device, setDevice] = useState<Device | null>(null)
-  const [moistureHistory, setMoistureHistory] = useState<MoistureData[]>([])
   const [currentSession, setCurrentSession] = useState<SessionData | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
@@ -60,14 +54,6 @@ export default function DeviceDetailsPage() {
       // Get current session data
       const sessionData = await getCurrentSessionDatapoints(deviceId, token)
       setCurrentSession(sessionData)
-      
-      // Transform session datapoints into moisture history format
-      const history = sessionData.datapoints.map((dp: { value: number; createdAt: string }) => ({
-        timestamp: dp.createdAt,
-        value: dp.value
-      }))
-      
-      setMoistureHistory(history)
     } catch (err) {
       setError("Failed to load device data")
       console.error("Error loading device data:", err)
@@ -121,6 +107,10 @@ export default function DeviceDetailsPage() {
     return "text-red-500"
   }
 
+  const convertToPercentage = (value: number) => {
+    return Math.round((value / 3300) * 100);
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center p-8">
@@ -145,7 +135,14 @@ export default function DeviceDetailsPage() {
 
   // Get the latest moisture value from current session
   const currentMoistureLevel = currentSession?.datapoints[currentSession.datapoints.length - 1]?.value || 0
+  const currentMoisturePercentage = convertToPercentage(currentMoistureLevel)
   const lastUpdated = currentSession?.datapoints[currentSession.datapoints.length - 1]?.createdAt || new Date().toISOString()
+
+  // Transform session datapoints into moisture history format with percentages
+  const history = currentSession?.datapoints.map((dp: { value: number; createdAt: string }) => ({
+    timestamp: dp.createdAt,
+    value: convertToPercentage(dp.value)
+  })) || []
 
   return (
     <div className="relative">
@@ -189,7 +186,7 @@ export default function DeviceDetailsPage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="mb-4 text-9xl font-bold cursor-help">
-                        <span className={getMoistureColor(currentMoistureLevel)}>{currentMoistureLevel}%</span>
+                        <span className={getMoistureColor(currentMoisturePercentage)}>{currentMoisturePercentage}%</span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="bg-white text-black border shadow-sm">
@@ -199,7 +196,7 @@ export default function DeviceDetailsPage() {
                 </TooltipProvider>
                 <div className="mt-8">
                   <h3 className="mb-2 text-sm text-muted-foreground">Estimated Drying Time</h3>
-                  <p className="text-2xl font-bold">{calculateDryingTime(currentMoistureLevel)}</p>
+                  <p className="text-2xl font-bold">{calculateDryingTime(currentMoisturePercentage)}</p>
                 </div>
               </div>
             ) : (
@@ -207,7 +204,7 @@ export default function DeviceDetailsPage() {
                 <h3 className="mb-4 text-sm text-muted-foreground">Moisture Level History</h3>
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={moistureHistory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <LineChart data={history} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="timestamp" tickFormatter={formatDate} minTickGap={60} />
                       <YAxis domain={[0, 100]} />

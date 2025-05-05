@@ -41,7 +41,6 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true)
   const [deviceToRemove, setDeviceToRemove] = useState<string | null>(null)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -92,11 +91,6 @@ export default function DevicesPage() {
       
       // Show success toast
       toast.success("Successful removal of device from the database.")
-      
-      // Show success dialog after 2 seconds
-      setTimeout(() => {
-        setShowSuccessDialog(true)
-      }, 2000)
     } catch (err) {
       setError("Failed to remove device")
       console.error(err)
@@ -106,10 +100,6 @@ export default function DevicesPage() {
   const cancelRemoveDevice = () => {
     setShowRemoveDialog(false)
     setDeviceToRemove(null)
-  }
-
-  const closeSuccessDialog = () => {
-    setShowSuccessDialog(false)
   }
 
   const navigateToDeviceDetails = (deviceId: string) => {
@@ -125,6 +115,9 @@ export default function DevicesPage() {
   }
 
   const getBatteryColor = (level: number) => {
+    if (level === undefined || level === null || level < 0 || level > 100) {
+      return "text-gray-500"
+    }
     if (level >= 75) return "text-green-500"
     if (level >= 50) return "text-yellow-500"
     if (level >= 25) return "text-orange-500"
@@ -139,6 +132,9 @@ export default function DevicesPage() {
   }
 
   const formatBatteryLevel = (level: number) => {
+    if (level === undefined || level === null || level < 0 || level > 100) {
+      return "— %"
+    }
     return `${level}%`
   }
 
@@ -250,30 +246,6 @@ export default function DevicesPage() {
                 </Button>
                 <Button variant="destructive" onClick={handleRemoveDevice}>
                   Remove
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Success Dialog */}
-          <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Reset Device</DialogTitle>
-                <DialogDescription className="space-y-4">
-                  <p>To complete the removal process:</p>
-                  <div className="mt-4 space-y-2">
-                    <ol className="list-decimal list-inside space-y-2 text-sm">
-                      <li>Press and hold the &quot;Reset&quot; button for 3 seconds</li>
-                      <li>Wait for the LED indicator to flash red</li>
-                      <li>The device is now ready to be paired with a new account</li>
-                    </ol>
-                  </div>
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button onClick={closeSuccessDialog}>
-                  Ok, I got it!
                 </Button>
               </DialogFooter>
             </DialogContent>
