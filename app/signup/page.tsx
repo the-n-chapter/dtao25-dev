@@ -73,9 +73,19 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold">Signup Form</h1>
         </div>
 
-        <div className="flex w-full overflow-hidden rounded-xl border">
-          <div className="w-1/2 bg-[#5DA9E9] py-2 text-center text-white">Signup</div>
-          <Link href="/login" className="w-1/2 py-2 text-center text-gray-600 hover:bg-gray-100">
+        <div className="flex w-full max-w-xs mx-auto mt-4">
+          <Link
+            href="/signup"
+            className="flex-1 py-2 text-center rounded-l-xl transition-colors bg-[#5DA9E9] text-white pointer-events-none text-base"
+            tabIndex={-1}
+            aria-disabled="true"
+          >
+            Signup
+          </Link>
+          <Link
+            href="/login"
+            className="flex-1 py-2 text-center rounded-r-xl transition-colors bg-gray-50 text-gray-600 hover:bg-gray-100 text-base"
+          >
             Login
           </Link>
         </div>
