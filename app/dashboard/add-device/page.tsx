@@ -33,7 +33,7 @@ export default function AddDevicePage() {
       // Open the mini app in the same window with the token
       window.location.href = `http://192.168.12.34/?token=${token}`
     } catch (error) {
-      console.error('Failed to open mini app:', error)
+      console.error("Failed to open mini app:", error)
       toast.error("Failed to open the mini app. Please try again.")
     } finally {
       setIsLoading(false)
@@ -65,12 +65,13 @@ export default function AddDevicePage() {
           <div className="max-w-lg">
             <ol className="space-y-4 list-decimal list-inside text-sm md:text-base">
               <li>Turn on the Pintell device.</li>
+              <li>Hold the &quot;Pairing&quot; button on the device for 3 seconds.</li>
               <li>
                 Connect to the Pintell device&apos;s Wi-Fi.
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                   <li>Go to your Wi-Fi settings.</li>
-                  <li>Enter the network name and password listed on the device&apos;s packaging.</li>
-                  <li>Once connected, click the button below.</li>
+                  <li>Choose the network name and enter the password listed on the packaging.</li>
+                  <li>Once successfully connected, click the button below.</li>
                 </ul>
               </li>
             </ol>

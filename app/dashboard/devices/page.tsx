@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Trash } from "lucide-react"
+import { ChevronLeft, Trash, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import {
@@ -21,12 +21,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { getMyProfile, deleteDevice } from "@/lib/front_end_api_service"
-import { toast } from "react-hot-toast"
+import { toast } from "sonner"
 
 type Device = {
   id: string
   hashedMACAddress: string
   owner: string
+  battery: number
   datapoints: Array<{
     value: number
     createdAt: string
@@ -40,6 +41,7 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true)
   const [deviceToRemove, setDeviceToRemove] = useState<string | null>(null)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -88,8 +90,13 @@ export default function DevicesPage() {
       setShowRemoveDialog(false)
       setDeviceToRemove(null)
       
-      // Show success message
-      toast.success("Device removed successfully")
+      // Show success toast
+      toast.success("Successful removal of device from the database.")
+      
+      // Show success dialog after 2 seconds
+      setTimeout(() => {
+        setShowSuccessDialog(true)
+      }, 2000)
     } catch (err) {
       setError("Failed to remove device")
       console.error(err)
@@ -99,6 +106,10 @@ export default function DevicesPage() {
   const cancelRemoveDevice = () => {
     setShowRemoveDialog(false)
     setDeviceToRemove(null)
+  }
+
+  const closeSuccessDialog = () => {
+    setShowSuccessDialog(false)
   }
 
   const navigateToDeviceDetails = (deviceId: string) => {
@@ -111,6 +122,24 @@ export default function DevicesPage() {
       return { value: 0, createdAt: new Date().toISOString() }
     }
     return device.datapoints[device.datapoints.length - 1]
+  }
+
+  const getBatteryColor = (level: number) => {
+    if (level >= 75) return "text-green-500"
+    if (level >= 50) return "text-yellow-500"
+    if (level >= 25) return "text-orange-500"
+    return "text-red-500"
+  }
+
+  const getBatteryIcon = (level: number) => {
+    if (level >= 75) return <BatteryFull className="h-6 w-6" />
+    if (level >= 50) return <BatteryMedium className="h-6 w-6" />
+    if (level >= 25) return <BatteryLow className="h-6 w-6" />
+    return <BatteryWarning className="h-6 w-6" />
+  }
+
+  const formatBatteryLevel = (level: number) => {
+    return `${level}%`
   }
 
   return (
@@ -157,7 +186,7 @@ export default function DevicesPage() {
               {/* Device rows */}
               {devices.map((device) => {
                 const latestDatapoint = getLatestDatapoint(device)
-                const moistureLevel = latestDatapoint.value
+                const batteryLevel = device.battery
                 const lastUpdated = latestDatapoint.createdAt
                 
                 return (
@@ -173,9 +202,11 @@ export default function DevicesPage() {
                             <div className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium hover:bg-[#4A98D8]">
                               Device {device.id}
                             </div>
-                            {/* Moisture Level */}
+                            {/* Battery Level */}
                             <div className="flex items-center">
-                              <span className="text-sm font-medium">{moistureLevel}%</span>
+                              <span className={`text-base font-medium ${getBatteryColor(batteryLevel)} flex items-center gap-1`}>
+                                {getBatteryIcon(batteryLevel)} {formatBatteryLevel(batteryLevel)}
+                              </span>
                             </div>
                             {/* Last Updated */}
                             <div className="text-sm text-muted-foreground">
@@ -210,23 +241,39 @@ export default function DevicesPage() {
               <DialogHeader>
                 <DialogTitle>Remove Device</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to remove this device?
+                  Are you sure you want to remove this device? This action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="flex flex-col sm:flex-row sm:justify-end items-center gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={handleRemoveDevice}
-                  className="w-24"
-                >
+              <DialogFooter>
+                <Button variant="outline" onClick={cancelRemoveDevice}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleRemoveDevice}>
                   Remove
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={cancelRemoveDevice}
-                  className="w-24"
-                >
-                  Cancel
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Success Dialog */}
+          <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reset Device</DialogTitle>
+                <DialogDescription className="space-y-4">
+                  <p>To complete the removal process:</p>
+                  <div className="mt-4 space-y-2">
+                    <ol className="list-decimal list-inside space-y-2 text-sm">
+                      <li>Press and hold the &quot;Reset&quot; button for 3 seconds</li>
+                      <li>Wait for the LED indicator to flash red</li>
+                      <li>The device is now ready to be paired with a new account</li>
+                    </ol>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button onClick={closeSuccessDialog}>
+                  Ok, I got it!
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -236,4 +283,3 @@ export default function DevicesPage() {
     </div>
   )
 }
-

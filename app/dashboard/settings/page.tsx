@@ -87,7 +87,6 @@ export default function SettingsPage() {
   const router = useRouter()
   const [username, setUsername] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   // Notification settings
@@ -184,11 +183,10 @@ export default function SettingsPage() {
       }
 
       localStorage.setItem(`${username}-notifications`, JSON.stringify(settings))
-      setSuccess('Notification settings saved successfully')
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      setError('Failed to save notification settings')
-      console.error(err)
+      toast.success("Notification settings saved successfully.")
+    } catch (error) {
+      console.error(error);
+      setError('Failed to save notification settings.')
     }
   }
 
@@ -264,12 +262,6 @@ export default function SettingsPage() {
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert className="mb-4 border-green-500 bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-50">
-            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
