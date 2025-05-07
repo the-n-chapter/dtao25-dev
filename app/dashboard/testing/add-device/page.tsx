@@ -4,7 +4,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
-import { createDevice } from "@/lib/front_end_api_service"
+import { createDevice, getMyProfile } from "@/lib/front_end_api_service"
+
+interface ApiErrorResponse {
+  message: string;
+}
 
 export default function DeviceTestingPage() {
   const [hashedMACAddress, setHashedMACAddress] = useState("testdevice")
@@ -19,10 +23,29 @@ export default function DeviceTestingPage() {
         toast.error("Please log in first")
         return
       }
+
+      // First check if device already exists
+      const { devices } = await getMyProfile(token)
+      const deviceExists = devices.some(device => device.hashedMACAddress === hashedMACAddress)
+      
+      if (deviceExists) {
+        toast.error(`A device with MAC address "${hashedMACAddress}" already exists`)
+        return
+      }
+
+      // If device doesn't exist, create it
       const response = await createDevice({ hashedMACAddress }, token)
+      
+      // Store the new device ID in localStorage
+      localStorage.setItem('newDeviceId', response.id.toString())
       toast.success(`Device created successfully with ID: ${response.id}`)
-    } catch {
-      toast.error("Failed to create device")
+    } catch (error: unknown) {
+      const err = error as { response?: { status: number; data?: ApiErrorResponse } }
+      if (err.response?.status === 400 && err.response.data?.message?.includes('already exists')) {
+        toast.error(`A device with MAC address "${hashedMACAddress}" already exists`)
+      } else {
+        toast.error("Failed to create device")
+      }
     } finally {
       setIsLoading(false)
     }

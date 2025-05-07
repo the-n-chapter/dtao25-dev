@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Trash, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -36,6 +36,7 @@ type Device = {
 
 export default function DevicesPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [devices, setDevices] = useState<Device[]>([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
@@ -55,6 +56,16 @@ export default function DevicesPage() {
         // Fetch user profile which includes their devices
         const { devices: userDevices } = await getMyProfile(token)
         setDevices(userDevices || [])
+
+        // Check for new device ID in localStorage
+        const newDeviceId = localStorage.getItem('newDeviceId')
+        if (newDeviceId) {
+          toast.success(`Device ${newDeviceId} has been added to your account.`, {
+            duration: Infinity, // Toast will stay until user interaction
+          })
+          // Clear the newDeviceId from localStorage
+          localStorage.removeItem('newDeviceId')
+        }
       } catch (err) {
         console.error("Error fetching devices:", err)
         setError("Failed to load devices")
@@ -65,6 +76,18 @@ export default function DevicesPage() {
 
     fetchDevices()
   }, [router])
+
+  useEffect(() => {
+    // Show toast if a new device was added
+    const newDeviceId = searchParams.get('newDevice')
+    if (newDeviceId) {
+      toast.success(`Device ${newDeviceId} has been added to your account.`, {
+        duration: Infinity, // Toast will stay until user interaction
+      })
+      // Clean up the URL parameter
+      router.replace('/dashboard/')
+    }
+  }, [searchParams, router])
 
   const confirmRemoveDevice = (deviceId: string, e: React.MouseEvent) => {
     e.stopPropagation() // Prevent row click from triggering
@@ -89,8 +112,8 @@ export default function DevicesPage() {
       setShowRemoveDialog(false)
       setDeviceToRemove(null)
       
-      // Show success toast
-      toast.success("Successful removal of device from the database.")
+      // Show success toast with device ID
+      toast.success(`Device ${deviceToRemove} has been removed from your account.`)
     } catch (err) {
       setError("Failed to remove device")
       console.error(err)
