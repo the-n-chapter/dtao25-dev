@@ -162,34 +162,43 @@ class NotificationService {
     const settings = this.getUserSettings(username)
     if (!settings?.moistureNotifications) return
 
-    // Get user's custom moisture thresholds
+    // Get user's custom moisture thresholds (intervals)
     const moistureThresholds = settings.selectedMoistureTags || []
     if (moistureThresholds.length === 0) return
 
-    // Convert threshold strings to numbers (remove % and convert to number)
-    const thresholds = moistureThresholds.map((t: string) => parseInt(t.replace('%', '')))
-
-    // Check if moisture level matches any threshold
-    for (const threshold of thresholds) {
-      if (moistureLevel === threshold) {
-        const isAlertActive = this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`]
-        
-        if (!isAlertActive) {
-          this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`] = true
-          const title = `Device ${deviceId}: Moisture Level Alert`;
-          const description = `Moisture level has reached ${moistureLevel}%.`;
-          
-          toast.info(title, {
-            description,
-            duration: NOTIFICATION_DURATION,
-            richColors: false,
-          });
-          this.addNotification(title, description, 'moisture', deviceId, threshold);
-          this.updateLastNotificationTime(deviceId)
-        }
+    // Parse intervals like '0-2%' into [0,2]
+    const intervals = moistureThresholds.map((interval: string) => {
+      const match = interval.match(/(\d+)-(\d+)%/)
+      if (match) {
+        return [parseInt(match[1]), parseInt(match[2])]
       } else {
-        // Reset alert state when moisture level changes
-        this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`] = false
+        // fallback for single value like '10%'
+        const single = parseInt(interval.replace('%', ''))
+        return [single, single]
+      }
+    })
+
+    // For each interval, check if moistureLevel falls within
+    for (let i = 0; i < intervals.length; i++) {
+      const [min, max] = intervals[i]
+      const alertKey = `${deviceId}-moisture-${min}-${max}`
+      const inInterval = moistureLevel >= min && moistureLevel <= max
+      const wasInInterval = this.notificationState.moistureAlertActive[alertKey]
+
+      if (inInterval && !wasInInterval) {
+        this.notificationState.moistureAlertActive[alertKey] = true
+        const title = `Device ${deviceId}: Moisture Level Alert`;
+        const description = `Moisture level is in the range ${min}-${max}% (currently at ${moistureLevel}%).`;
+        toast.info(title, {
+          description,
+          duration: NOTIFICATION_DURATION,
+          richColors: false,
+        });
+        this.addNotification(title, description, 'moisture', deviceId, min);
+        this.updateLastNotificationTime(deviceId)
+      } else if (wasInInterval && moistureLevel > max) {
+        // Reset alert only when rising above the upper margin
+        this.notificationState.moistureAlertActive[alertKey] = false
       }
     }
   }

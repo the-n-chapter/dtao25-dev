@@ -204,11 +204,13 @@ export default function DevicesPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#5DA9E9] border-t-transparent"></div>
             </div>
           ) : devices.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-              <h3 className="mb-2 text-lg font-medium">No devices found</h3>
-              <Button onClick={() => router.push("/dashboard/add-device")} className="bg-[#5DA9E9] hover:bg-[#4A98D8]">
-                Add Your First Device
-              </Button>
+            <div className="w-full lg:mx-auto lg:max-w-[66%]">
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <h3 className="mb-2 text-lg font-medium">No devices found</h3>
+                <Button onClick={() => router.push("/dashboard/add-device")} className="bg-[#5DA9E9] hover:bg-[#4A98D8]">
+                  Add Your First Device
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

@@ -9,6 +9,7 @@ import { AlertCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "@/components/chart"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getDeviceById, getCurrentSessionDatapoints, startSession } from "@/lib/front_end_api_service"
+import { estimateTimeRemainingLR } from '@/lib/utils'
 
 type Device = {
   id: string
@@ -87,14 +88,6 @@ export default function DeviceDetailsPage() {
     }
   }
 
-  const calculateDryingTime = (moistureLevel: number) => {
-    if (moistureLevel < 20) return "Less than 1 hour"
-    if (moistureLevel < 40) return "1-2 hours"
-    if (moistureLevel < 60) return "2-4 hours"
-    if (moistureLevel < 80) return "4-8 hours"
-    return "More than 8 hours"
-  }
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -109,6 +102,24 @@ export default function DeviceDetailsPage() {
 
   const convertToPercentage = (value: number) => {
     return Math.round((value / 3300) * 100);
+  }
+
+  // Regression-based drying time estimate (to 0% moisture)
+  const getEstimatedDryingTime = () => {
+    if (!currentSession || !currentSession.datapoints || currentSession.datapoints.length < 2) return 'Not enough data';
+    // Convert all values to percentage for regression
+    const datapoints = currentSession.datapoints.map(dp => ({
+      value: Math.round((dp.value / 3300) * 100),
+      createdAt: dp.createdAt
+    }));
+    const ms = estimateTimeRemainingLR(datapoints, 0);
+    if (!isFinite(ms) || ms < 0) return 'No drying trend';
+    const hours = Math.floor(ms / 3600000);
+    const mins = Math.round((ms % 3600000) / 60000);
+    if (hours < 1 && mins < 1) return 'Less than 1 min';
+    if (hours < 1) return `${mins} min${mins === 1 ? '' : 's'}`;
+    if (hours < 24) return `${hours}h ${mins}m`;
+    return 'More than 1 day';
   }
 
   if (loading) {
@@ -196,7 +207,7 @@ export default function DeviceDetailsPage() {
                 </TooltipProvider>
                 <div className="mt-8">
                   <h3 className="mb-2 text-sm text-muted-foreground">Estimated Drying Time</h3>
-                  <p className="text-2xl font-bold">{calculateDryingTime(currentMoisturePercentage)}</p>
+                  <p className="text-2xl font-bold">{getEstimatedDryingTime()}</p>
                 </div>
               </div>
             ) : (
