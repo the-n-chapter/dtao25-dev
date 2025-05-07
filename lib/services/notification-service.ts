@@ -2,14 +2,27 @@
 
 import { toast } from 'sonner'
 
+interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  timestamp: number;
+  type: 'battery' | 'moisture';
+  deviceId: string;
+  threshold: number;
+  unread: boolean;
+}
+
 interface NotificationState {
-  lastNotificationTime: Record<string, number>
-  batteryAlertActive: Record<string, boolean>
-  moistureAlertActive: Record<string, boolean>
-  previousBatteryLevel?: Record<string, number>
+  lastNotificationTime: Record<string, number>;
+  batteryAlertActive: Record<string, boolean>;
+  moistureAlertActive: Record<string, boolean>;
+  previousBatteryLevel?: Record<string, number>;
+  notifications: Notification[]; // Store all notifications
 }
 
 const NOTIFICATION_INTERVAL = 30 * 60 * 1000 // 30 minutes in milliseconds
+const NOTIFICATION_DURATION = 15 * 1000 // 15 seconds in milliseconds
 
 class NotificationService {
   private static instance: NotificationService
@@ -17,6 +30,7 @@ class NotificationService {
     lastNotificationTime: {},
     batteryAlertActive: {},
     moistureAlertActive: {},
+    notifications: []
   }
 
   private constructor() {}
@@ -44,6 +58,34 @@ class NotificationService {
     this.notificationState.lastNotificationTime[deviceId] = Date.now()
   }
 
+  private addNotification(title: string, description: string, type: 'battery' | 'moisture', deviceId: string, threshold: number) {
+    const notification: Notification = {
+      id: `${deviceId}-${threshold}-${Date.now()}`,
+      title,
+      description,
+      timestamp: Date.now(),
+      type,
+      deviceId: String(deviceId),
+      threshold,
+      unread: true
+    };
+    this.notificationState.notifications.push(notification);
+  }
+
+  getAllNotifications() {
+    // Return all notifications, newest first
+    return [...this.notificationState.notifications].sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  getUnreadNotifications() {
+    return this.notificationState.notifications.filter(n => n.unread);
+  }
+
+  markNotificationAsRead(notificationId: string) {
+    const notif = this.notificationState.notifications.find(n => n.id === notificationId);
+    if (notif) notif.unread = false;
+  }
+
   handleBatteryUpdate(username: string, deviceId: string, batteryLevel: number) {
     const settings = this.getUserSettings(username)
     if (!settings?.batteryNotifications) return
@@ -67,35 +109,47 @@ class NotificationService {
         this.notificationState.previousBatteryLevel = {};
       }
 
-      // Case 1: Exact threshold match - notify for any threshold
-      if (batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
+      // Case 1: Exact threshold match for 0% and 100%
+      if ((threshold === 0 || threshold === 100) && batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
         this.notificationState.batteryAlertActive[alertKey] = true;
-        toast.info(`Device ${deviceId}: Battery Level Alert`, {
-          description: `Battery level has reached ${batteryLevel}%.`,
-          duration: Infinity,
+        const title = `Device ${deviceId}: Battery Level Alert`;
+        const description = `Battery level has reached ${batteryLevel}%.`;
+        
+        toast.info(title, {
+          description,
+          duration: NOTIFICATION_DURATION,
           richColors: false,
         });
+        this.addNotification(title, description, 'battery', deviceId, threshold);
         this.updateLastNotificationTime(deviceId);
       }
-      // Case 2: First time crossing below threshold (for non-zero thresholds)
+      // Case 2: First time crossing below threshold (for non-0% and non-100% thresholds)
       else if (
-        threshold !== 0 &&
+        threshold !== 0 && threshold !== 100 &&
         prevLevel !== undefined &&
         prevLevel > threshold &&
         batteryLevel < threshold &&
         !this.notificationState.batteryAlertActive[alertKey]
       ) {
         this.notificationState.batteryAlertActive[alertKey] = true;
-        toast.info(`Device ${deviceId}: Battery Level Alert`, {
-          description: `Battery level has dropped below ${threshold}% (currently at ${batteryLevel}%).`,
-          duration: Infinity,
+        const title = `Device ${deviceId}: Battery Level Alert`;
+        const description = `Battery level has dropped below ${threshold}% (currently at ${batteryLevel}%).`;
+        
+        toast.info(title, {
+          description,
+          duration: NOTIFICATION_DURATION,
           richColors: false,
         });
+        this.addNotification(title, description, 'battery', deviceId, threshold);
         this.updateLastNotificationTime(deviceId);
       }
 
-      // Reset alert state when battery level increases above threshold
-      if (batteryLevel > threshold) {
+      // Reset alert state when battery level changes from threshold
+      if (threshold === 0 && batteryLevel > 0) {
+        this.notificationState.batteryAlertActive[alertKey] = false;
+      } else if (threshold === 100 && batteryLevel < 100) {
+        this.notificationState.batteryAlertActive[alertKey] = false;
+      } else if (threshold !== 0 && threshold !== 100 && batteryLevel > threshold) {
         this.notificationState.batteryAlertActive[alertKey] = false;
       }
 
@@ -122,10 +176,15 @@ class NotificationService {
         
         if (!isAlertActive) {
           this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`] = true
-          toast.info(`Device ${deviceId}: Moisture Level Alert`, {
-            description: `Moisture level has reached ${moistureLevel}%.`,
-            duration: Infinity,
-          })
+          const title = `Device ${deviceId}: Moisture Level Alert`;
+          const description = `Moisture level has reached ${moistureLevel}%.`;
+          
+          toast.info(title, {
+            description,
+            duration: NOTIFICATION_DURATION,
+            richColors: false,
+          });
+          this.addNotification(title, description, 'moisture', deviceId, threshold);
           this.updateLastNotificationTime(deviceId)
         }
       } else {
@@ -140,6 +199,10 @@ class NotificationService {
     delete this.notificationState.lastNotificationTime[deviceId]
     delete this.notificationState.batteryAlertActive[deviceId]
     delete this.notificationState.moistureAlertActive[deviceId]
+    // Remove all notifications for this device
+    this.notificationState.notifications = this.notificationState.notifications.filter(
+      notification => notification.deviceId !== deviceId
+    );
   }
 }
 

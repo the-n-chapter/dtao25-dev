@@ -95,7 +95,7 @@ export default function SettingsPage() {
   const [selectedBatteryTags, setSelectedBatteryTags] = useState<string[]>([])
   const [selectedMoistureTags, setSelectedMoistureTags] = useState<string[]>([])
 
-  const batteryOptions = ['50%', '25%', '0%']
+  const batteryOptions = ['100%', '50%', '0%']
   const moistureOptions = ['50%', '25%', '0%']
 
   // Delete account

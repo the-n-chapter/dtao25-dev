@@ -10,33 +10,36 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useNotificationStore } from "@/lib/stores/notification-store"
-
-type Notification = {
-  id: string
-  type: "moisture" | "battery"
-  deviceId: string
-  message: string
-  description: string
-  timestamp: Date
-  read: boolean
-}
+import { notificationService } from "@/lib/services/notification-service"
 
 export function NotificationCenter() {
-  const notifications = useNotificationStore((state) => state.notifications)
+  const [notifications, setNotifications] = useState(() =>
+    notificationService.getAllNotifications()
+  )
   const [open, setOpen] = useState(false)
 
+  // Poll for updates every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNotifications(notificationService.getAllNotifications())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   const markAllAsRead = () => {
-    const updatedNotifications = notifications.map((n) => ({ ...n, read: true }))
-    useNotificationStore.getState().setNotifications(updatedNotifications)
+    notifications.forEach((n) => {
+      if (n.unread) notificationService.markNotificationAsRead(n.id)
+    })
+    setNotifications(notificationService.getAllNotifications())
   }
 
   const dismissNotification = (id: string) => {
-    const updatedNotifications = notifications.filter((n) => n.id !== id)
-    useNotificationStore.getState().setNotifications(updatedNotifications)
+    notificationService.markNotificationAsRead(id)
+    setNotifications(notificationService.getAllNotifications())
   }
 
-  const formatTime = (date: Date) => {
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
     const diffMins = Math.floor(diffMs / (1000 * 60))
@@ -53,8 +56,8 @@ export function NotificationCenter() {
 
   const moistureNotifications = notifications.filter(n => n.type === "moisture")
   const batteryNotifications = notifications.filter(n => n.type === "battery")
-  const unreadMoistureCount = moistureNotifications.filter(n => !n.read).length
-  const unreadBatteryCount = batteryNotifications.filter(n => !n.read).length
+  const unreadMoistureCount = moistureNotifications.filter(n => n.unread).length
+  const unreadBatteryCount = batteryNotifications.filter(n => n.unread).length
   const totalUnreadCount = unreadMoistureCount + unreadBatteryCount
 
   return (
@@ -112,7 +115,7 @@ export function NotificationCenter() {
                       <div
                         key={notification.id}
                         className={`relative flex items-start p-4 hover:bg-accent/50 ${
-                          notification.read ? "bg-background" : "bg-accent/30"
+                          notification.unread ? "bg-accent/30" : "bg-background"
                         }`}
                       >
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 mr-4">
@@ -130,15 +133,17 @@ export function NotificationCenter() {
                           <p className="text-sm text-muted-foreground mt-1">{notification.description}</p>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => dismissNotification(notification.id)}
-                        >
-                          <X className="h-3 w-3" />
-                          <span className="sr-only">Dismiss</span>
-                        </Button>
+                        {notification.unread && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => dismissNotification(notification.id)}
+                          >
+                            <X className="h-3 w-3" />
+                            <span className="sr-only">Mark as read</span>
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -158,7 +163,7 @@ export function NotificationCenter() {
                       <div
                         key={notification.id}
                         className={`relative flex items-start p-4 hover:bg-accent/50 ${
-                          notification.read ? "bg-background" : "bg-accent/30"
+                          notification.unread ? "bg-accent/30" : "bg-background"
                         }`}
                       >
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 mr-4">
@@ -176,15 +181,17 @@ export function NotificationCenter() {
                           <p className="text-sm text-muted-foreground mt-1">{notification.description}</p>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => dismissNotification(notification.id)}
-                        >
-                          <X className="h-3 w-3" />
-                          <span className="sr-only">Dismiss</span>
-                        </Button>
+                        {notification.unread && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => dismissNotification(notification.id)}
+                          >
+                            <X className="h-3 w-3" />
+                            <span className="sr-only">Mark as read</span>
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
