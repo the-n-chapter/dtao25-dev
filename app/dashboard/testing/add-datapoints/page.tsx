@@ -80,6 +80,56 @@ export default function AddDatapointsPage() {
     }
   }
 
+  const handleGenerateIncreasingDatapoint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        toast.error("Please log in first");
+        return;
+      }
+
+      // Calculate next values
+      let nextValue, nextBattery;
+      if (!lastDatapoint) {
+        nextValue = 0;
+        nextBattery = 0;
+      } else {
+        nextValue = Math.min(3300, lastDatapoint.value + 30); // Increase by 30, max 3300
+        nextBattery = Math.min(100, lastDatapoint.battery + 1); // Increase by 1, max 100
+      }
+
+      // 20% chance to simulate communication failure
+      if (Math.random() < 0.2) {
+        nextBattery = -1;
+        console.log("Skipping datapoint due to simulated communication failure");
+        toast.error("Communication failure - no datapoint created");
+        return;
+      }
+
+      const datapoint = {
+        value: nextValue,
+        battery: nextBattery,
+        deviceHashedMACAddress: deviceId
+      };
+
+      await createDatapoint(datapoint);
+
+      // Update last datapoint
+      const newLastDatapoint = { value: nextValue, battery: nextBattery };
+      setLastDatapoint(newLastDatapoint);
+      localStorage.setItem(`lastDatapoint_${deviceId}`, JSON.stringify(newLastDatapoint));
+
+      toast.success(`Created datapoint: Value = ${nextValue}, Battery = ${nextBattery}%`);
+    } catch (error) {
+      console.error("Failed to generate datapoint:", error);
+      toast.error("Failed to generate datapoint");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-[360px] space-y-6 rounded-lg border p-8">
@@ -117,7 +167,15 @@ export default function AddDatapointsPage() {
               required
             />
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Generating..." : "Generate Datapoint"}
+              {isLoading ? "Generating..." : "Generate Decreasing Data"}
+            </Button>
+            <Button
+              type="button"
+              disabled={isLoading}
+              onClick={handleGenerateIncreasingDatapoint}
+              variant="secondary"
+            >
+              {isLoading ? "Generating..." : "Generate Increasing Data"}
             </Button>
           </form>
         </div>

@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useNotificationStore } from "@/lib/stores/notification-store"
 
 type Notification = {
   id: string
@@ -22,86 +23,17 @@ type Notification = {
 }
 
 export function NotificationCenter() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const notifications = useNotificationStore((state) => state.notifications)
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    // Clear old cached notifications
-    localStorage.removeItem("notifications")
-    
-    // Load notifications from localStorage
-    const storedNotifications = localStorage.getItem("notifications")
-    if (storedNotifications) {
-      try {
-        const parsed = JSON.parse(storedNotifications)
-        // Validate that notifications are in the new format
-        if (parsed[0]?.description) {
-          setNotifications(
-            parsed.map((n: Notification) => ({
-              ...n,
-              timestamp: new Date(n.timestamp),
-            })),
-          )
-          return
-        }
-      } catch (e) {
-        console.error('Error parsing notifications:', e)
-      }
-    }
-
-    // Generate mock notifications if none exist or if old format
-    const mockNotifications: Notification[] = [
-      {
-        id: "1",
-        type: "moisture",
-        deviceId: "SP-001",
-        message: "Item is Dry",
-        description: "Your item is now completely dry.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-        read: false,
-      },
-      {
-        id: "2",
-        type: "battery",
-        deviceId: "SP-002",
-        message: "Low Battery Alert",
-        description: "Battery level is at 18%. Please charge your device soon.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        read: true,
-      },
-      {
-        id: "3",
-        type: "battery",
-        deviceId: "SP-003",
-        message: "Battery fully charged",
-        description: "Your device's battery is now fully charged.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-        read: false,
-      },
-      {
-        id: "4",
-        type: "moisture",
-        deviceId: "SP-001",
-        message: "Low Moisture Alert",
-        description: "Moisture level is at 15%. Your item is getting dry.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        read: true,
-      }
-    ]
-    setNotifications(mockNotifications)
-    localStorage.setItem("notifications", JSON.stringify(mockNotifications))
-  }, [])
 
   const markAllAsRead = () => {
     const updatedNotifications = notifications.map((n) => ({ ...n, read: true }))
-    setNotifications(updatedNotifications)
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifications))
+    useNotificationStore.getState().setNotifications(updatedNotifications)
   }
 
   const dismissNotification = (id: string) => {
     const updatedNotifications = notifications.filter((n) => n.id !== id)
-    setNotifications(updatedNotifications)
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifications))
+    useNotificationStore.getState().setNotifications(updatedNotifications)
   }
 
   const formatTime = (date: Date) => {

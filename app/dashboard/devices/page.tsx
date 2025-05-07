@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip"
 import { getMyProfile, deleteDevice } from "@/lib/front_end_api_service"
 import { toast } from "sonner"
+import { notificationService } from "@/lib/services/notification-service"
 
 type Device = {
   id: string
@@ -43,54 +44,62 @@ export default function DevicesPage() {
   const [deviceToRemove, setDeviceToRemove] = useState<string | null>(null)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
 
-  useEffect(() => {
-    const fetchDevices = async () => {
-      try {
-        // Check if user is authenticated
-        const token = localStorage.getItem("authToken")
-        if (!token) {
-          router.push("/login")
-          return
-        }
-
-        // Fetch user profile which includes their devices
-        const { devices: userDevices } = await getMyProfile(token)
-        setDevices(userDevices || [])
-
-        // Check for new device ID in localStorage
-        const newDeviceId = localStorage.getItem('newDeviceId')
-        if (newDeviceId) {
-          toast.success(`Device ${newDeviceId} has been added to your account.`, {
-            duration: Infinity, // Toast will stay until user interaction
-          })
-          // Clear the newDeviceId from localStorage
-          localStorage.removeItem('newDeviceId')
-        }
-      } catch (err) {
-        console.error("Error fetching devices:", err)
-        setError("Failed to load devices")
-      } finally {
-        setLoading(false)
+  const fetchDevices = async () => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem("authToken")
+      if (!token) {
+        router.push("/login")
+        return
       }
-    }
 
+      const { devices: userDevices, username } = await getMyProfile(token)
+      setDevices(userDevices || [])
+
+      const newDeviceId = localStorage.getItem('newDeviceId')
+      if (newDeviceId) {
+        toast.success(`Device ${newDeviceId} has been added to your account.`, {
+          duration: Infinity,
+        })
+        localStorage.removeItem('newDeviceId')
+      }
+
+      if (userDevices && username) {
+        userDevices.forEach(device => {
+          notificationService.handleBatteryUpdate(username, device.id, device.battery)
+          const latestDatapoint = device.datapoints[device.datapoints.length - 1]
+          if (latestDatapoint) {
+            const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100)
+            notificationService.handleMoistureUpdate(username, device.id, moisturePercentage)
+          }
+        })
+      }
+    } catch (err) {
+      console.error("Error fetching devices:", err)
+      setError("Failed to load devices")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchDevices()
+    const interval = setInterval(fetchDevices, 5 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [router])
 
   useEffect(() => {
-    // Show toast if a new device was added
     const newDeviceId = searchParams.get('newDevice')
     if (newDeviceId) {
       toast.success(`Device ${newDeviceId} has been added to your account.`, {
-        duration: Infinity, // Toast will stay until user interaction
+        duration: 120000
       })
-      // Clean up the URL parameter
-      router.replace('/dashboard/')
+      router.replace('/dashboard/devices')
     }
   }, [searchParams, router])
 
   const confirmRemoveDevice = (deviceId: string, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent row click from triggering
+    e.stopPropagation()
     setDeviceToRemove(deviceId)
     setShowRemoveDialog(true)
   }
@@ -100,19 +109,12 @@ export default function DevicesPage() {
       if (!deviceToRemove) return
 
       const token = localStorage.getItem("authToken")
-      if (!token) {
-        throw new Error("User not authenticated")
-      }
+      if (!token) throw new Error("User not authenticated")
 
-      // Delete device using API
       await deleteDevice(parseInt(deviceToRemove), token)
-      
-      // Update local state
       setDevices(devices.filter((device) => device.id !== deviceToRemove))
       setShowRemoveDialog(false)
       setDeviceToRemove(null)
-      
-      // Show success toast with device ID
       toast.success(`Device ${deviceToRemove} has been removed from your account.`)
     } catch (err) {
       setError("Failed to remove device")
@@ -129,7 +131,6 @@ export default function DevicesPage() {
     router.push(`/dashboard/device-details/${deviceId}`)
   }
 
-  // Get the latest datapoint for a device
   const getLatestDatapoint = (device: Device) => {
     if (!device.datapoints || device.datapoints.length === 0) {
       return { value: 0, createdAt: new Date().toISOString() }
@@ -138,9 +139,8 @@ export default function DevicesPage() {
   }
 
   const getBatteryColor = (level: number) => {
-    if (level === undefined || level === null || level < 0 || level > 100) {
-      return "text-gray-500"
-    }
+    if (typeof level !== 'number' || isNaN(level)) return "text-gray-500"
+    if (level === 0 || level < 25) return "text-red-500"
     if (level >= 75) return "text-green-500"
     if (level >= 50) return "text-yellow-500"
     if (level >= 25) return "text-orange-500"
@@ -148,16 +148,15 @@ export default function DevicesPage() {
   }
 
   const getBatteryIcon = (level: number) => {
-    if (level >= 75) return <BatteryFull className="h-6 w-6" />
-    if (level >= 50) return <BatteryMedium className="h-6 w-6" />
-    if (level >= 25) return <BatteryLow className="h-6 w-6" />
+    const parsed = Number(level)
+    if (parsed >= 75) return <BatteryFull className="h-6 w-6" />
+    if (parsed >= 50) return <BatteryMedium className="h-6 w-6" />
+    if (parsed >= 25) return <BatteryLow className="h-6 w-6" />
     return <BatteryWarning className="h-6 w-6" />
   }
 
   const formatBatteryLevel = (level: number) => {
-    if (level === undefined || level === null || level < 0 || level > 100) {
-      return "— %"
-    }
+    if (typeof level !== 'number' || isNaN(level)) return "— %"
     return `${level}%`
   }
 
@@ -182,6 +181,17 @@ export default function DevicesPage() {
             <p className="text-muted-foreground">Manage your Pintell devices</p>
           </div>
 
+          <div className="w-full lg:mx-auto lg:max-w-[66%] mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchDevices}
+              disabled={loading}
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </Button>
+          </div>
+
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -202,12 +212,11 @@ export default function DevicesPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {/* Device rows */}
               {devices.map((device) => {
                 const latestDatapoint = getLatestDatapoint(device)
-                const batteryLevel = device.battery
+                const batteryLevel = typeof device.battery === 'number' ? device.battery : NaN
                 const lastUpdated = latestDatapoint.createdAt
-                
+
                 return (
                   <TooltipProvider delayDuration={100} key={device.id}>
                     <Tooltip>
@@ -217,22 +226,18 @@ export default function DevicesPage() {
                           onClick={() => navigateToDeviceDetails(device.id)}
                         >
                           <div className="flex items-center gap-4 flex-wrap">
-                            {/* Device ID */}
                             <div className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium hover:bg-[#4A98D8]">
                               Device {device.id}
                             </div>
-                            {/* Battery Level */}
                             <div className="flex items-center">
                               <span className={`text-base font-medium ${getBatteryColor(batteryLevel)} flex items-center gap-1`}>
                                 {getBatteryIcon(batteryLevel)} {formatBatteryLevel(batteryLevel)}
                               </span>
                             </div>
-                            {/* Last Updated */}
                             <div className="text-sm text-muted-foreground">
                               Updated: {new Date(lastUpdated).toLocaleString()}
                             </div>
                           </div>
-                          {/* Remove Action */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -254,7 +259,6 @@ export default function DevicesPage() {
             </div>
           )}
 
-          {/* Remove Device Confirmation Dialog */}
           <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
             <DialogContent>
               <DialogHeader>

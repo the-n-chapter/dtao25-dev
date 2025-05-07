@@ -6,6 +6,7 @@ interface NotificationState {
   lastNotificationTime: Record<string, number>
   batteryAlertActive: Record<string, boolean>
   moistureAlertActive: Record<string, boolean>
+  previousBatteryLevel?: Record<string, number>
 }
 
 const NOTIFICATION_INTERVAL = 30 * 60 * 1000 // 30 minutes in milliseconds
@@ -47,35 +48,59 @@ class NotificationService {
     const settings = this.getUserSettings(username)
     if (!settings?.batteryNotifications) return
 
-    // Handle 100% battery notification (one-time)
-    if (batteryLevel === 100 && settings.batteryFull) {
-      toast.success(`Device ${deviceId}: Battery fully charged`, {
-        description: "Your device's battery is now fully charged.",
-      })
-      return
-    }
+    // Get user's custom battery thresholds
+    const batteryThresholds = settings.selectedBatteryTags || []
+    if (batteryThresholds.length === 0) return
 
-    // Handle low battery notifications (periodic)
-    if (batteryLevel < 20 && batteryLevel > 0 && settings.batteryLow) {
-      const isAlertActive = this.notificationState.batteryAlertActive[deviceId]
-      
-      if (!isAlertActive) {
-        // First alert when battery drops below 20%
-        this.notificationState.batteryAlertActive[deviceId] = true
-        toast.warning(`Device ${deviceId}: Low Battery Alert`, {
-          description: `Battery level is at ${batteryLevel}%. Please charge your device soon.`,
-        })
-        this.updateLastNotificationTime(deviceId)
-      } else if (this.canSendNotification(deviceId)) {
-        // Periodic reminder
-        toast.warning(`Device ${deviceId}: Low Battery Reminder`, {
-          description: `Battery level is still at ${batteryLevel}%. Please charge your device.`,
-        })
-        this.updateLastNotificationTime(deviceId)
+    // Convert threshold strings to numbers (remove % and convert to number)
+    const thresholds = batteryThresholds.map((t: string) => parseInt(t.replace('%', '')))
+    // Sort thresholds in descending order to handle them from highest to lowest
+    thresholds.sort((a: number, b: number) => b - a)
+
+    for (const threshold of thresholds) {
+      const alertKey = `${deviceId}-${threshold}`;
+      const prevKey = `${deviceId}-${threshold}-prev`;
+      const prevLevel = this.notificationState.previousBatteryLevel?.[prevKey];
+
+      // Initialize previousBatteryLevel if it doesn't exist
+      if (!this.notificationState.previousBatteryLevel) {
+        this.notificationState.previousBatteryLevel = {};
       }
-    } else if (batteryLevel >= 20 || batteryLevel <= 0) {
-      // Reset alert state when battery level goes above 20% or reaches 0%
-      this.notificationState.batteryAlertActive[deviceId] = false
+
+      // Case 1: Exact threshold match - notify for any threshold
+      if (batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
+        this.notificationState.batteryAlertActive[alertKey] = true;
+        toast.info(`Device ${deviceId}: Battery Level Alert`, {
+          description: `Battery level has reached ${batteryLevel}%.`,
+          duration: Infinity,
+          richColors: false,
+        });
+        this.updateLastNotificationTime(deviceId);
+      }
+      // Case 2: First time crossing below threshold (for non-zero thresholds)
+      else if (
+        threshold !== 0 &&
+        prevLevel !== undefined &&
+        prevLevel > threshold &&
+        batteryLevel < threshold &&
+        !this.notificationState.batteryAlertActive[alertKey]
+      ) {
+        this.notificationState.batteryAlertActive[alertKey] = true;
+        toast.info(`Device ${deviceId}: Battery Level Alert`, {
+          description: `Battery level has dropped below ${threshold}% (currently at ${batteryLevel}%).`,
+          duration: Infinity,
+          richColors: false,
+        });
+        this.updateLastNotificationTime(deviceId);
+      }
+
+      // Reset alert state when battery level increases above threshold
+      if (batteryLevel > threshold) {
+        this.notificationState.batteryAlertActive[alertKey] = false;
+      }
+
+      // Update previous value
+      this.notificationState.previousBatteryLevel[prevKey] = batteryLevel;
     }
   }
 
@@ -83,32 +108,29 @@ class NotificationService {
     const settings = this.getUserSettings(username)
     if (!settings?.moistureNotifications) return
 
-    if (moistureLevel < 20 && moistureLevel > 0 && settings.moistureLow) {
-      const isAlertActive = this.notificationState.moistureAlertActive[deviceId]
-      
-      if (!isAlertActive) {
-        // First alert when moisture drops below 20%
-        this.notificationState.moistureAlertActive[deviceId] = true
-        toast.warning(`Device ${deviceId}: Low Moisture Alert`, {
-          description: `Moisture level is at ${moistureLevel}%. Your item is getting dry.`,
-        })
-        this.updateLastNotificationTime(deviceId)
-      } else if (this.canSendNotification(deviceId)) {
-        // Periodic reminder
-        toast.warning(`Device ${deviceId}: Low Moisture Reminder`, {
-          description: `Moisture level is still at ${moistureLevel}%.`,
-        })
-        this.updateLastNotificationTime(deviceId)
-      }
-    } else if (moistureLevel >= 20 || moistureLevel <= 0) {
-      // Reset alert state when moisture level goes above 20% or reaches 0%
-      this.notificationState.moistureAlertActive[deviceId] = false
-      
-      // Notify when completely dry (0%)
-      if (moistureLevel === 0 && settings.moistureDry) {
-        toast.info(`Device ${deviceId}: Item is Dry`, {
-          description: "Your item is now completely dry.",
-        })
+    // Get user's custom moisture thresholds
+    const moistureThresholds = settings.selectedMoistureTags || []
+    if (moistureThresholds.length === 0) return
+
+    // Convert threshold strings to numbers (remove % and convert to number)
+    const thresholds = moistureThresholds.map((t: string) => parseInt(t.replace('%', '')))
+
+    // Check if moisture level matches any threshold
+    for (const threshold of thresholds) {
+      if (moistureLevel === threshold) {
+        const isAlertActive = this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`]
+        
+        if (!isAlertActive) {
+          this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`] = true
+          toast.info(`Device ${deviceId}: Moisture Level Alert`, {
+            description: `Moisture level has reached ${moistureLevel}%.`,
+            duration: Infinity,
+          })
+          this.updateLastNotificationTime(deviceId)
+        }
+      } else {
+        // Reset alert state when moisture level changes
+        this.notificationState.moistureAlertActive[`${deviceId}-${threshold}`] = false
       }
     }
   }
