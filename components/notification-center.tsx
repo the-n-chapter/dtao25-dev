@@ -33,6 +33,11 @@ export function NotificationCenter() {
     setNotifications(notificationService.getAllNotifications())
   }
 
+  const deleteAllNotifications = () => {
+    notificationService.deleteAllNotifications()
+    setNotifications(notificationService.getAllNotifications())
+  }
+
   const dismissNotification = (id: string) => {
     notificationService.markNotificationAsRead(id)
     setNotifications(notificationService.getAllNotifications())
@@ -76,11 +81,15 @@ export function NotificationCenter() {
         <div className="flex h-[500px] flex-col">
           <div className="flex items-center justify-between border-b p-4">
             <h2 className="text-lg font-semibold">Notifications</h2>
-            {notifications.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-sm whitespace-nowrap">
-                Mark all as read
-              </Button>
-            )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={markAllAsRead} 
+              className="text-sm whitespace-nowrap"
+              disabled={notifications.length === 0}
+            >
+              Mark all as read
+            </Button>
           </div>
 
           <Tabs defaultValue="moisture" className="flex-1">
@@ -199,6 +208,17 @@ export function NotificationCenter() {
               </ScrollArea>
             </TabsContent>
           </Tabs>
+          <div className="flex items-center justify-center border-t p-4 bg-background">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={deleteAllNotifications}
+              className="text-sm whitespace-nowrap"
+              disabled={notifications.length === 0}
+            >
+              Delete all notifications
+            </Button>
+          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

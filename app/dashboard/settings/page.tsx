@@ -96,7 +96,7 @@ export default function SettingsPage() {
   const [selectedMoistureTags, setSelectedMoistureTags] = useState<string[]>(['0-2%'])
 
   const batteryOptions = ['100%', '50%', '0%']
-  const moistureOptions = ['0-2%', '10-15%', '20-25%']
+  const moistureOptions = ['0-2%', '10-15%', '20-25%', '70-75%']
 
   // Delete account
   const [isDeleting, setIsDeleting] = useState(false)
@@ -346,7 +346,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   The settings are applied to <span className="font-bold">all</span> the devices connected to your account.<br />
                   If you turn on notifications, you need to choose <span className="font-bold">at least one</span> threshold for each section.
-                  The following settings are <span className="font-bold">by default</span> enabled for new accounts.
+                  Change the <span className="font-bold">default</span> settings to your liking.
                 </p>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">

@@ -50,14 +50,6 @@ export default function AddDatapointsPage() {
         nextBattery = Math.max(0, lastDatapoint.battery - 1) // Decrease by 1, minimum 0
       }
 
-      // 20% chance to simulate communication failure
-      if (Math.random() < 0.2) {
-        nextBattery = -1
-        console.log("Skipping datapoint due to simulated communication failure")
-        toast.error("Communication failure - no datapoint created")
-        return
-      }
-
       const datapoint = {
         value: nextValue,
         battery: nextBattery,
@@ -100,14 +92,6 @@ export default function AddDatapointsPage() {
         nextBattery = Math.min(100, lastDatapoint.battery + 1); // Increase by 1, max 100
       }
 
-      // 20% chance to simulate communication failure
-      if (Math.random() < 0.2) {
-        nextBattery = -1;
-        console.log("Skipping datapoint due to simulated communication failure");
-        toast.error("Communication failure - no datapoint created");
-        return;
-      }
-
       const datapoint = {
         value: nextValue,
         battery: nextBattery,
@@ -121,7 +105,7 @@ export default function AddDatapointsPage() {
       setLastDatapoint(newLastDatapoint);
       localStorage.setItem(`lastDatapoint_${deviceId}`, JSON.stringify(newLastDatapoint));
 
-      toast.success(`Created datapoint: Value = ${nextValue}, Battery = ${nextBattery}%`);
+      toast.success(`Created datapoint: Value = ${nextValue}, Battery = ${nextBattery}`);
     } catch (error) {
       console.error("Failed to generate datapoint:", error);
       toast.error("Failed to generate datapoint");
@@ -142,11 +126,8 @@ export default function AddDatapointsPage() {
           <div className="rounded-md bg-muted p-4">
             <h3 className="font-medium mb-2">Test Instructions:</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm">
-              <li>Make sure you are logged in first</li>
               <li>Enter the device ID (hashedMACAddress)</li>
-              <li>Click &quot;Generate Datapoint&quot; to create one test datapoint</li>
-              <li>Each click will create a new datapoint with decreasing values</li>
-              <li>Values range from 3300 to 0, battery from 100% to 0%</li>
+              <li>Each click will add a new datapoint based on the previous value, either decreasing ([3300, 0] for moisture, [100, 0] for battery) or increasing ([0, 3300] for moisture, [0, 100] for battery)</li>
             </ol>
           </div>
 
@@ -154,7 +135,7 @@ export default function AddDatapointsPage() {
             <div className="rounded-md bg-blue-50 p-4 text-sm">
               <p>Last datapoint:</p>
               <p>Value: {lastDatapoint.value}</p>
-              <p>Battery: {lastDatapoint.battery}%</p>
+              <p>Battery: {lastDatapoint.battery}</p>
             </div>
           )}
 

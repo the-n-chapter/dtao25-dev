@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getMyProfile, deleteDevice } from "@/lib/front_end_api_service"
+import { getMyProfile, deleteDevice, getCurrentSessionDatapoints } from "@/lib/front_end_api_service"
 import { toast } from "sonner"
 import { notificationService } from "@/lib/services/notification-service"
 
@@ -28,12 +28,15 @@ type Device = {
   id: string
   hashedMACAddress: string
   owner: string
-  battery: number
+  battery?: number
   datapoints: Array<{
     value: number
     createdAt: string
+    updatedAt: string
   }>
 }
+
+const OFFLINE_THRESHOLD = 10 * 60 * 1000 // 10 minutes in milliseconds
 
 export default function DevicesPage() {
   const router = useRouter()
@@ -54,7 +57,49 @@ export default function DevicesPage() {
       }
 
       const { devices: userDevices, username } = await getMyProfile(token)
-      setDevices(userDevices || [])
+      
+      // Fetch current session datapoints for each device
+      const devicesWithDatapoints = await Promise.all(
+        (userDevices || []).map(async (device) => {
+          try {
+            // Get current session datapoints
+            const { datapoints } = await getCurrentSessionDatapoints(device.id, token)
+            
+            console.log('Current Session Datapoints:', {
+              deviceId: device.id,
+              datapointsCount: datapoints?.length,
+              firstDatapoint: datapoints?.[0]
+            });
+            
+            // Ensure we have valid datapoints
+            if (!datapoints || !Array.isArray(datapoints)) {
+              console.error(`Invalid current session response for device ${device.id}`);
+              return {
+                ...device,
+                datapoints: []
+              };
+            }
+            
+            // Filter out the session delimiter (value = -1) and sort by createdAt
+            const validDatapoints = datapoints
+              .filter(dp => dp.value !== -1) // Exclude session delimiter
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            
+            return {
+              ...device,
+              datapoints: validDatapoints
+            }
+          } catch (error) {
+            console.error(`Error fetching current session for device ${device.id}:`, error)
+            return {
+              ...device,
+              datapoints: []
+            }
+          }
+        })
+      )
+
+      setDevices(devicesWithDatapoints)
 
       const newDeviceId = localStorage.getItem('newDeviceId')
       if (newDeviceId) {
@@ -64,10 +109,10 @@ export default function DevicesPage() {
         localStorage.removeItem('newDeviceId')
       }
 
-      if (userDevices && username) {
-        userDevices.forEach(device => {
+      if (devicesWithDatapoints && username) {
+        devicesWithDatapoints.forEach(device => {
           notificationService.handleBatteryUpdate(username, device.id, device.battery)
-          const latestDatapoint = device.datapoints[device.datapoints.length - 1]
+          const latestDatapoint = device.datapoints[0]
           if (latestDatapoint) {
             const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100)
             notificationService.handleMoistureUpdate(username, device.id, moisturePercentage)
@@ -92,7 +137,7 @@ export default function DevicesPage() {
     const newDeviceId = searchParams.get('newDevice')
     if (newDeviceId) {
       toast.success(`Device ${newDeviceId} has been added to your account.`, {
-        duration: 120000
+        duration: 60000
       })
       router.replace('/dashboard/devices')
     }
@@ -131,14 +176,8 @@ export default function DevicesPage() {
     router.push(`/dashboard/device-details/${deviceId}`)
   }
 
-  const getLatestDatapoint = (device: Device) => {
-    if (!device.datapoints || device.datapoints.length === 0) {
-      return { value: 0, createdAt: new Date().toISOString() }
-    }
-    return device.datapoints[device.datapoints.length - 1]
-  }
-
-  const getBatteryColor = (level: number) => {
+  const getBatteryColor = (level: number, isOffline: boolean) => {
+    if (isOffline) return "text-gray-500"
     if (typeof level !== 'number' || isNaN(level)) return "text-gray-500"
     if (level === 0 || level < 25) return "text-red-500"
     if (level >= 75) return "text-green-500"
@@ -147,7 +186,8 @@ export default function DevicesPage() {
     return "text-red-500"
   }
 
-  const getBatteryIcon = (level: number) => {
+  const getBatteryIcon = (level: number, isOffline: boolean) => {
+    if (isOffline) return <BatteryWarning className="h-6 w-6" />
     const parsed = Number(level)
     if (parsed >= 75) return <BatteryFull className="h-6 w-6" />
     if (parsed >= 50) return <BatteryMedium className="h-6 w-6" />
@@ -155,9 +195,47 @@ export default function DevicesPage() {
     return <BatteryWarning className="h-6 w-6" />
   }
 
-  const formatBatteryLevel = (level: number) => {
+  const formatBatteryLevel = (level: number, isOffline: boolean) => {
+    if (isOffline) return "— %"
     if (typeof level !== 'number' || isNaN(level)) return "— %"
     return `${level}%`
+  }
+
+  const isDeviceOffline = (device: Device) => {
+    if (!device.datapoints || device.datapoints.length === 0) {
+      console.log('Device Status Debug - No datapoints:', {
+        deviceId: device.id,
+        hasDatapoints: !!device.datapoints,
+        datapointsLength: device.datapoints?.length
+      });
+      return true;
+    }
+    
+    const lastDataTime = new Date(device.datapoints[0].createdAt).getTime();
+    const currentTime = Date.now();
+    const timeSinceLastData = currentTime - lastDataTime;
+    
+    console.log('Device Status Debug:', {
+      deviceId: device.id,
+      lastDataTime: new Date(lastDataTime).toISOString(),
+      currentTime: new Date(currentTime).toISOString(),
+      timeSinceLastData,
+      timeSinceLastDataInMinutes: Math.round(timeSinceLastData / (60 * 1000)),
+      threshold: OFFLINE_THRESHOLD,
+      thresholdInMinutes: Math.round(OFFLINE_THRESHOLD / (60 * 1000)),
+      isOffline: timeSinceLastData > OFFLINE_THRESHOLD,
+      datapointsCount: device.datapoints.length,
+      firstDatapoint: device.datapoints[0]
+    });
+    
+    return timeSinceLastData > OFFLINE_THRESHOLD;
+  }
+
+  const getDeviceStatus = (device: Device) => {
+    const isOffline = isDeviceOffline(device);
+    // Only use battery level if it's a valid number
+    const batteryLevel = typeof device.battery === 'number' && device.battery >= 0 ? device.battery : undefined;
+    return { isOffline, batteryLevel };
   }
 
   return (
@@ -215,29 +293,32 @@ export default function DevicesPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {devices.map((device) => {
-                const latestDatapoint = getLatestDatapoint(device)
                 const batteryLevel = typeof device.battery === 'number' ? device.battery : NaN
-                const lastUpdated = latestDatapoint.createdAt
+                const deviceStatus = getDeviceStatus(device)
+                const isOffline = deviceStatus.isOffline
 
                 return (
                   <TooltipProvider delayDuration={100} key={device.id}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
-                          className="flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 hover:shadow-md hover:border-[#5DA9E9] w-full lg:mx-auto lg:max-w-[66%] cursor-pointer"
-                          onClick={() => navigateToDeviceDetails(device.id)}
+                          className={`flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 ${
+                            isOffline 
+                              ? "bg-gray-100 cursor-not-allowed opacity-70" 
+                              : "hover:shadow-md hover:border-[#5DA9E9] cursor-pointer"
+                          } w-full lg:mx-auto lg:max-w-[66%]`}
+                          onClick={() => !isOffline && navigateToDeviceDetails(device.id)}
                         >
                           <div className="flex items-center gap-4 flex-wrap">
-                            <div className="bg-[#5DA9E9] text-white px-3 py-1 rounded-md font-medium hover:bg-[#4A98D8]">
+                            <div className={`${
+                              isOffline ? "bg-gray-400" : "bg-[#5DA9E9] hover:bg-[#4A98D8]"
+                            } text-white px-3 py-1 rounded-md font-medium`}>
                               Device {device.id}
                             </div>
                             <div className="flex items-center">
-                              <span className={`text-base font-medium ${getBatteryColor(batteryLevel)} flex items-center gap-1`}>
-                                {getBatteryIcon(batteryLevel)} {formatBatteryLevel(batteryLevel)}
+                              <span className={`text-base font-medium ${getBatteryColor(batteryLevel, isOffline)} flex items-center gap-1`}>
+                                {getBatteryIcon(batteryLevel, isOffline)} {formatBatteryLevel(batteryLevel, isOffline)}
                               </span>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Updated: {new Date(lastUpdated).toLocaleString()}
                             </div>
                           </div>
                           <Button
@@ -251,8 +332,8 @@ export default function DevicesPage() {
                           </Button>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-white text-black border shadow-sm">
-                        <p>Click to view moisture data</p>
+                      <TooltipContent>
+                        {isOffline ? "OFFLINE" : "ONLINE | Click to view moisture data"}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

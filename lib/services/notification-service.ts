@@ -18,6 +18,7 @@ interface NotificationState {
   batteryAlertActive: Record<string, boolean>;
   moistureAlertActive: Record<string, boolean>;
   previousBatteryLevel?: Record<string, number>;
+  previousMoistureLevel?: Record<string, number>;
   notifications: Notification[]; // Store all notifications
 }
 
@@ -33,7 +34,92 @@ class NotificationService {
     notifications: []
   }
 
-  private constructor() {}
+  private constructor() {
+    // Load notifications from localStorage on initialization
+    const savedNotifications = localStorage.getItem('notifications')
+    if (savedNotifications) {
+      this.notificationState.notifications = JSON.parse(savedNotifications)
+    }
+
+    // Load alert states from localStorage
+    const savedAlertStates = localStorage.getItem('notificationAlertStates')
+    if (savedAlertStates) {
+      const states = JSON.parse(savedAlertStates)
+      this.notificationState.batteryAlertActive = states.batteryAlertActive || {}
+      this.notificationState.moistureAlertActive = states.moistureAlertActive || {}
+      this.notificationState.previousBatteryLevel = states.previousBatteryLevel || {}
+      this.notificationState.previousMoistureLevel = states.previousMoistureLevel || {}
+    }
+  }
+
+  private saveNotifications() {
+    localStorage.setItem('notifications', JSON.stringify(this.notificationState.notifications))
+    // Save alert states to localStorage
+    localStorage.setItem('notificationAlertStates', JSON.stringify({
+      batteryAlertActive: this.notificationState.batteryAlertActive,
+      moistureAlertActive: this.notificationState.moistureAlertActive,
+      previousBatteryLevel: this.notificationState.previousBatteryLevel,
+      previousMoistureLevel: this.notificationState.previousMoistureLevel
+    }))
+  }
+
+  // Clean up notifications older than 72 hours (3 days)
+  private cleanupOldNotifications() {
+    const THREE_DAYS_MS = 72 * 60 * 60 * 1000; // 72 hours in milliseconds
+    const now = Date.now();
+    
+    // Remove notifications older than 72 hours (3 days)
+    this.notificationState.notifications = this.notificationState.notifications.filter(
+      notification => (now - notification.timestamp) < THREE_DAYS_MS
+    );
+    
+    // Clean up alert states for devices that haven't sent updates in 72 hours
+    const deviceIds = new Set(this.notificationState.notifications.map(n => n.deviceId));
+    
+    // Clean up battery alert states
+    Object.keys(this.notificationState.batteryAlertActive).forEach(key => {
+      const deviceId = key.split('-')[0];
+      if (!deviceIds.has(deviceId)) {
+        delete this.notificationState.batteryAlertActive[key];
+      }
+    });
+
+    // Clean up moisture alert states
+    Object.keys(this.notificationState.moistureAlertActive).forEach(key => {
+      const deviceId = key.split('-')[0];
+      if (!deviceIds.has(deviceId)) {
+        delete this.notificationState.moistureAlertActive[key];
+      }
+    });
+
+    // Clean up last notification times
+    Object.keys(this.notificationState.lastNotificationTime).forEach(deviceId => {
+      if (!deviceIds.has(deviceId)) {
+        delete this.notificationState.lastNotificationTime[deviceId];
+      }
+    });
+
+    // Clean up previous levels for devices that haven't sent updates
+    if (this.notificationState.previousBatteryLevel) {
+      Object.keys(this.notificationState.previousBatteryLevel || {}).forEach(key => {
+        const deviceId = key.split('-')[0];
+        if (!deviceIds.has(deviceId)) {
+          delete this.notificationState.previousBatteryLevel![key];
+        }
+      });
+    }
+
+    if (this.notificationState.previousMoistureLevel) {
+      Object.keys(this.notificationState.previousMoistureLevel || {}).forEach(key => {
+        const deviceId = key.split('-')[0];
+        if (!deviceIds.has(deviceId)) {
+          delete this.notificationState.previousMoistureLevel![key];
+        }
+      });
+    }
+
+    this.saveNotifications();
+  }
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -70,9 +156,12 @@ class NotificationService {
       unread: true
     };
     this.notificationState.notifications.push(notification);
+    this.saveNotifications();
+    this.cleanupOldNotifications(); // Clean up old notifications after adding new ones
   }
 
   getAllNotifications() {
+    this.cleanupOldNotifications(); // Clean up before returning notifications
     // Return all notifications, newest first
     return [...this.notificationState.notifications].sort((a, b) => b.timestamp - a.timestamp);
   }
@@ -83,7 +172,23 @@ class NotificationService {
 
   markNotificationAsRead(notificationId: string) {
     const notif = this.notificationState.notifications.find(n => n.id === notificationId);
-    if (notif) notif.unread = false;
+    if (notif) {
+      notif.unread = false;
+      // Don't reset alert state when marking as read
+      this.saveNotifications();
+    }
+  }
+
+  markAllAsRead() {
+    this.notificationState.notifications.forEach(notif => {
+      notif.unread = false;
+    });
+    this.saveNotifications();
+  }
+
+  deleteAllNotifications() {
+    this.notificationState.notifications = [];
+    this.saveNotifications();
   }
 
   handleBatteryUpdate(username: string, deviceId: string, batteryLevel: number) {
@@ -159,36 +264,77 @@ class NotificationService {
   }
 
   handleMoistureUpdate(username: string, deviceId: string, moistureLevel: number) {
+    console.log('Moisture Update Called:', {
+      username,
+      deviceId,
+      moistureLevel,
+      timestamp: new Date().toISOString()
+    });
+
     const settings = this.getUserSettings(username)
-    if (!settings?.moistureNotifications) return
+    console.log('User Settings:', settings);
+
+    if (!settings?.moistureNotifications) {
+      console.log('Moisture notifications disabled for user');
+      return;
+    }
 
     // Get user's custom moisture thresholds (intervals)
     const moistureThresholds = settings.selectedMoistureTags || []
-    if (moistureThresholds.length === 0) return
+    console.log('Moisture Thresholds:', moistureThresholds);
+
+    if (moistureThresholds.length === 0) {
+      console.log('No moisture thresholds configured');
+      return;
+    }
 
     // Parse intervals like '0-2%' into [0,2]
     const intervals = moistureThresholds.map((interval: string) => {
       const match = interval.match(/(\d+)-(\d+)%/)
       if (match) {
-        return [parseInt(match[1]), parseInt(match[2])]
+        const min = parseInt(match[1])
+        const max = parseInt(match[2])
+        // Ensure min <= max
+        return [Math.min(min, max), Math.max(min, max)]
       } else {
         // fallback for single value like '10%'
         const single = parseInt(interval.replace('%', ''))
         return [single, single]
       }
     })
+    console.log('Parsed Intervals:', intervals);
 
     // For each interval, check if moistureLevel falls within
     for (let i = 0; i < intervals.length; i++) {
       const [min, max] = intervals[i]
       const alertKey = `${deviceId}-moisture-${min}-${max}`
+      const prevKey = `${deviceId}-moisture-${min}-${max}-prev`
+      const prevLevel = this.notificationState.previousMoistureLevel?.[prevKey]
+
+      // Initialize previousMoistureLevel if it doesn't exist
+      if (!this.notificationState.previousMoistureLevel) {
+        this.notificationState.previousMoistureLevel = {};
+      }
+
       const inInterval = moistureLevel >= min && moistureLevel <= max
       const wasInInterval = this.notificationState.moistureAlertActive[alertKey]
 
+      console.log('Checking Interval:', {
+        min,
+        max,
+        alertKey,
+        inInterval,
+        wasInInterval,
+        prevLevel,
+        currentAlertState: this.notificationState.moistureAlertActive[alertKey]
+      });
+
+      // Case 1: First time entering the interval
       if (inInterval && !wasInInterval) {
+        console.log('Triggering moisture notification - entering interval');
         this.notificationState.moistureAlertActive[alertKey] = true
         const title = `Device ${deviceId}: Moisture Level Alert`;
-        const description = `Moisture level is in the range ${min}-${max}% (currently at ${moistureLevel}%).`;
+        const description = `Moisture level is currently at ${moistureLevel}%.`;
         toast.info(title, {
           description,
           duration: NOTIFICATION_DURATION,
@@ -196,10 +342,15 @@ class NotificationService {
         });
         this.addNotification(title, description, 'moisture', deviceId, min);
         this.updateLastNotificationTime(deviceId)
-      } else if (wasInInterval && moistureLevel > max) {
-        // Reset alert only when rising above the upper margin
+      }
+      // Case 2: Exiting the interval
+      else if (wasInInterval && !inInterval) {
+        console.log('Resetting moisture alert state - exiting interval');
         this.notificationState.moistureAlertActive[alertKey] = false
       }
+
+      // Update previous value
+      this.notificationState.previousMoistureLevel[prevKey] = moistureLevel;
     }
   }
 
@@ -212,6 +363,7 @@ class NotificationService {
     this.notificationState.notifications = this.notificationState.notifications.filter(
       notification => notification.deviceId !== deviceId
     );
+    this.saveNotifications(); // Save after resetting
   }
 }
 
