@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getMyProfile, deleteDevice, getCurrentSessionDatapoints } from "@/lib/front_end_api_service"
+import { getMyProfile, deleteDevice, getCurrentSessionDatapoints, startSession } from "@/lib/front_end_api_service"
 import { toast } from "sonner"
 import { notificationService } from "@/lib/services/notification-service"
 
@@ -37,6 +37,7 @@ type Device = {
 }
 
 const OFFLINE_THRESHOLD = 10 * 60 * 1000 // 10 minutes in milliseconds
+const SESSION_COOLDOWN = 15 * 60 * 1000 // 15 minutes in milliseconds
 
 export default function DevicesPage() {
   const router = useRouter()
@@ -46,6 +47,8 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true)
   const [deviceToRemove, setDeviceToRemove] = useState<string | null>(null)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
+  const [startingDevices, setStartingDevices] = useState<Record<string, boolean>>({})
+  const [lastSessionStart, setLastSessionStart] = useState<Record<string, number>>({})
 
   const fetchDevices = async () => {
     try {
@@ -231,11 +234,56 @@ export default function DevicesPage() {
     return timeSinceLastData > OFFLINE_THRESHOLD;
   }
 
+  const handleStartSession = async (deviceId: string) => {
+    try {
+      const token = localStorage.getItem("authToken")
+      if (!token) {
+        router.push("/login")
+        return
+      }
+
+      const now = Date.now()
+      const lastStart = lastSessionStart[deviceId] || 0
+      if (now - lastStart < SESSION_COOLDOWN) {
+        const remainingMinutes = Math.ceil((SESSION_COOLDOWN - (now - lastStart)) / 60000)
+        toast.error(`Please wait ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''} before starting a new session`)
+        return
+      }
+
+      // Set the device as starting
+      setStartingDevices(prev => ({ ...prev, [deviceId]: true }))
+
+      // Find the device to get its hashedMACAddress
+      const device = devices.find(d => d.id === deviceId)
+      if (!device) {
+        throw new Error("Device not found")
+      }
+
+      // Start the session using hashedMACAddress
+      await startSession(device.hashedMACAddress, token)
+      
+      // Update last session start time
+      setLastSessionStart(prev => ({ ...prev, [deviceId]: now }))
+      
+      // Fetch updated data immediately
+      await fetchDevices()
+      
+      toast.success("Tracking started. Awaiting first reading...")
+    } catch (err) {
+      console.error("Error starting session:", err)
+      toast.error("Failed to start session")
+    } finally {
+      // Remove the device from starting state
+      setStartingDevices(prev => ({ ...prev, [deviceId]: false }))
+    }
+  }
+
   const getDeviceStatus = (device: Device) => {
     const isOffline = isDeviceOffline(device);
+    const isStarting = startingDevices[device.id];
     // Only use battery level if it's a valid number
     const batteryLevel = typeof device.battery === 'number' && device.battery >= 0 ? device.battery : undefined;
-    return { isOffline, batteryLevel };
+    return { isOffline, batteryLevel, isStarting };
   }
 
   return (
@@ -256,7 +304,7 @@ export default function DevicesPage() {
         <div className="space-y-6 px-2 py-4 lg:pl-0 lg:pt-16">
           <div className="mb-6 space-y-2 text-center">
             <h1 className="text-2xl font-bold">My Devices</h1>
-            <p className="text-muted-foreground">Manage your Pintell devices</p>
+            <p className="text-muted-foreground">Device paired? Turn it on, start a session, and we'll do the rest.</p>
           </div>
 
           <div className="w-full lg:mx-auto lg:max-w-[66%] mb-4">
@@ -293,47 +341,66 @@ export default function DevicesPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {devices.map((device) => {
-                const batteryLevel = typeof device.battery === 'number' ? device.battery : NaN
-                const deviceStatus = getDeviceStatus(device)
-                const isOffline = deviceStatus.isOffline
+                const { isOffline, batteryLevel, isStarting } = getDeviceStatus(device)
+                const now = Date.now()
+                const lastStart = lastSessionStart[device.id] || 0
+                const isInCooldown = now - lastStart < SESSION_COOLDOWN
 
                 return (
                   <TooltipProvider delayDuration={100} key={device.id}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
-                          className={`flex flex-row items-center justify-between gap-4 rounded-lg border p-5 pr-2 transition-all duration-200 ${
-                            isOffline 
-                              ? "bg-gray-100 cursor-not-allowed opacity-70" 
-                              : "hover:shadow-md hover:border-[#5DA9E9] cursor-pointer"
+                          className={`flex flex-col gap-2 rounded-lg border p-5 pr-2 transition-all duration-200 ${
+                            isStarting 
+                              ? "hover:shadow-md hover:border-[#5DA9E9] cursor-pointer" 
+                              : isOffline
+                                ? "bg-gray-100 opacity-70"
+                                : "hover:shadow-md hover:border-[#5DA9E9] cursor-pointer"
                           } w-full lg:mx-auto lg:max-w-[66%]`}
-                          onClick={() => !isOffline && navigateToDeviceDetails(device.id)}
+                          onClick={() => isStarting && navigateToDeviceDetails(device.id)}
                         >
-                          <div className="flex items-center gap-4 flex-wrap">
-                            <div className={`${
-                              isOffline ? "bg-gray-400" : "bg-[#5DA9E9] hover:bg-[#4A98D8]"
-                            } text-white px-3 py-1 rounded-md font-medium`}>
-                              Device {device.id}
-                            </div>
-                            <div className="flex items-center">
-                              <span className={`text-base font-medium ${getBatteryColor(batteryLevel, isOffline)} flex items-center gap-1`}>
-                                {getBatteryIcon(batteryLevel, isOffline)} {formatBatteryLevel(batteryLevel, isOffline)}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className={`${
+                                isOffline ? "bg-gray-400" : "bg-[#5DA9E9] hover:bg-[#4A98D8]"
+                              } text-white px-3 py-1 rounded-md font-medium`}>
+                                Device {device.id}
+                              </div>
+                              <span className={`text-sm font-medium ${getBatteryColor(batteryLevel || 0, isOffline)} flex items-center gap-1`}>
+                                {getBatteryIcon(batteryLevel || 0, isOffline)} {formatBatteryLevel(batteryLevel || 0, isOffline)}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {isStarting ? "Loading..." : isOffline ? "OFF" : "ON"}
                               </span>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive/80 shrink-0"
+                              onClick={(e) => confirmRemoveDevice(device.id, e)}
+                            >
+                              <Trash className="mr-1 h-4 w-4" />
+                              <span className="hidden sm:inline">Remove</span>
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive/80 shrink-0"
-                            onClick={(e) => confirmRemoveDevice(device.id, e)}
-                          >
-                            <Trash className="mr-1 h-4 w-4" />
-                            <span className="hidden sm:inline">Remove</span>
-                          </Button>
+                          <div className="border-t border-gray-200 my-2"></div>
+                          <div className="pl-0">
+                            <button
+                              className={`text-sm font-semibold ${isInCooldown || isStarting ? "text-muted-foreground cursor-not-allowed" : "text-black hover:text-gray-700 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleStartSession(device.id)
+                              }}
+                              disabled={isInCooldown || isStarting}
+                            >
+                              {isStarting ? "Starting..." : isInCooldown ? "Session in Progress" : "Start a New Session"}
+                            </button>
+                          </div>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {isOffline ? "OFFLINE" : "ONLINE | Click to view moisture data"}
+                        Click to view moisture data of the current session
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -341,27 +408,27 @@ export default function DevicesPage() {
               })}
             </div>
           )}
-
-          <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Remove Device</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to remove this device? This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={cancelRemoveDevice}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleRemoveDevice}>
-                  Remove
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
+
+      <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Device</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this device? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelRemoveDevice}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveDevice}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
