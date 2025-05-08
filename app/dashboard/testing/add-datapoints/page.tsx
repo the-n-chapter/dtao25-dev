@@ -18,11 +18,18 @@ export default function AddDatapointsPage() {
 
   // Load last datapoint from localStorage when deviceId changes
   useEffect(() => {
-    const stored = localStorage.getItem(`lastDatapoint_${deviceId}`)
-    if (stored) {
-      setLastDatapoint(JSON.parse(stored))
-    } else {
-      setLastDatapoint(null)
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`lastDatapoint_${deviceId}`)
+      if (stored) {
+        try {
+          setLastDatapoint(JSON.parse(stored))
+        } catch (e) {
+          console.error('Error parsing stored datapoint:', e)
+          setLastDatapoint(null)
+        }
+      } else {
+        setLastDatapoint(null)
+      }
     }
   }, [deviceId])
 
@@ -30,6 +37,8 @@ export default function AddDatapointsPage() {
     e.preventDefault()
     setIsLoading(true)
     try {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem("authToken")
       if (!token) {
         toast.error("Please log in first")
@@ -76,6 +85,8 @@ export default function AddDatapointsPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem("authToken");
       if (!token) {
         toast.error("Please log in first");
@@ -114,12 +125,41 @@ export default function AddDatapointsPage() {
     }
   };
 
+  const handleStartSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      if (typeof window === 'undefined') return;
+      
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        toast.error("Please log in first");
+        return;
+      }
+
+      // Use the same format as other datapoints but with fixed value of -1
+      const datapoint = {
+        value: -1,
+        battery: lastDatapoint?.battery ?? 100, // Use current battery or default to 100
+        deviceHashedMACAddress: deviceId
+      };
+
+      await createDatapoint(datapoint);
+      toast.success("Started new session with value: -1");
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      toast.error("Failed to start session");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-[360px] space-y-6 rounded-lg border p-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Datapoint Testing</h1>
-          <p className="text-muted-foreground mt-2">Generate test datapoints for a device</p>
+          <p className="text-muted-foreground mt-1">Generate test datapoints for a device</p>
         </div>
 
         <div className="space-y-4">
@@ -127,6 +167,7 @@ export default function AddDatapointsPage() {
             <h3 className="font-medium mb-2">Test Instructions:</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm">
               <li>Enter the device ID (hashedMACAddress)</li>
+              <li>Click &quot;Start Session&quot; to start a new session</li>
               <li>Each click will add a new datapoint based on the previous value, either decreasing ([3300, 0] for moisture, [100, 0] for battery) or increasing ([0, 3300] for moisture, [0, 100] for battery)</li>
             </ol>
           </div>
@@ -147,6 +188,15 @@ export default function AddDatapointsPage() {
               onChange={(e) => setDeviceId(e.target.value)}
               required
             />
+            <Button
+              type="button"
+              disabled={isLoading}
+              onClick={handleStartSession}
+              variant="outline"
+            >
+              {isLoading ? "Starting..." : "Start Session"}
+            </Button>
+            <div className="border-t my-2" />
             <Button type="submit" disabled={isLoading}>
               {isLoading ? "Generating..." : "Generate Decreasing Data"}
             </Button>

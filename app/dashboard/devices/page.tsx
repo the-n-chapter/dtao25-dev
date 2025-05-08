@@ -20,24 +20,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getMyProfile, deleteDevice, getCurrentSessionDatapoints, startSession } from "@/lib/front_end_api_service"
+import { getMyProfile, deleteDevice, getCurrentSessionDatapoints } from "@/lib/front_end_api_service"
 import { toast } from "sonner"
 import { notificationService } from "@/lib/services/notification-service"
+
+type Datapoint = {
+  value: number
+  createdAt: string
+  updatedAt: string
+}
 
 type Device = {
   id: string
   hashedMACAddress: string
   owner: string
   battery?: number
-  datapoints: Array<{
-    value: number
-    createdAt: string
-    updatedAt: string
-  }>
+  datapoints: Datapoint[]
 }
 
 const OFFLINE_THRESHOLD = 10 * 60 * 1000 // 10 minutes in milliseconds
-const SESSION_COOLDOWN = 15 * 60 * 1000 // 15 minutes in milliseconds
 
 export default function DevicesPage() {
   const router = useRouter()
@@ -47,12 +48,12 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true)
   const [deviceToRemove, setDeviceToRemove] = useState<string | null>(null)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
-  const [startingDevices, setStartingDevices] = useState<Record<string, boolean>>({})
-  const [lastSessionStart, setLastSessionStart] = useState<Record<string, number>>({})
 
   const fetchDevices = async () => {
     try {
       setLoading(true)
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem("authToken")
       if (!token) {
         router.push("/login")
@@ -83,10 +84,9 @@ export default function DevicesPage() {
               };
             }
             
-            // Filter out the session delimiter (value = -1) and sort by createdAt
+            // Filter out the session delimiter (value = -1)
             const validDatapoints = datapoints
-              .filter(dp => dp.value !== -1) // Exclude session delimiter
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              .filter((dp: Datapoint) => dp.value !== -1); // Exclude session delimiter
             
             return {
               ...device,
@@ -104,23 +104,26 @@ export default function DevicesPage() {
 
       setDevices(devicesWithDatapoints)
 
-      const newDeviceId = localStorage.getItem('newDeviceId')
-      if (newDeviceId) {
-        toast.success(`Device ${newDeviceId} has been added to your account.`, {
-          duration: Infinity,
-        })
-        localStorage.removeItem('newDeviceId')
-      }
+      if (typeof window !== 'undefined') {
+        const newDeviceId = localStorage.getItem('newDeviceId')
+        if (newDeviceId) {
+          toast.success(`Device ${newDeviceId} has been added to your account.`, {
+            duration: Infinity,
+          })
+          localStorage.removeItem('newDeviceId')
+        }
 
-      if (devicesWithDatapoints && username) {
-        devicesWithDatapoints.forEach(device => {
-          notificationService.handleBatteryUpdate(username, device.id, device.battery)
-          const latestDatapoint = device.datapoints[0]
-          if (latestDatapoint) {
-            const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100)
-            notificationService.handleMoistureUpdate(username, device.id, moisturePercentage)
-          }
-        })
+        if (devicesWithDatapoints && username) {
+          devicesWithDatapoints.forEach(device => {
+            notificationService.handleBatteryUpdate(username, device.id, device.battery)
+            const validDatapoints = device.datapoints.filter(dp => dp.value !== -1);
+            const latestDatapoint = validDatapoints[validDatapoints.length - 1];
+            if (latestDatapoint) {
+              const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100)
+              notificationService.handleMoistureUpdate(username, device.id, moisturePercentage)
+            }
+          })
+        }
       }
     } catch (err) {
       console.error("Error fetching devices:", err)
@@ -155,6 +158,7 @@ export default function DevicesPage() {
   const handleRemoveDevice = async () => {
     try {
       if (!deviceToRemove) return
+      if (typeof window === 'undefined') return;
 
       const token = localStorage.getItem("authToken")
       if (!token) throw new Error("User not authenticated")
@@ -214,7 +218,11 @@ export default function DevicesPage() {
       return true;
     }
     
-    const lastDataTime = new Date(device.datapoints[0].createdAt).getTime();
+    const validDatapoints = device.datapoints.filter(dp => dp.value !== -1);
+    const lastDatapoint = validDatapoints[validDatapoints.length - 1];
+    if (!lastDatapoint) return true;
+    
+    const lastDataTime = new Date(lastDatapoint.createdAt).getTime();
     const currentTime = Date.now();
     const timeSinceLastData = currentTime - lastDataTime;
     
@@ -232,58 +240,6 @@ export default function DevicesPage() {
     });
     
     return timeSinceLastData > OFFLINE_THRESHOLD;
-  }
-
-  const handleStartSession = async (deviceId: string) => {
-    try {
-      const token = localStorage.getItem("authToken")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      const now = Date.now()
-      const lastStart = lastSessionStart[deviceId] || 0
-      if (now - lastStart < SESSION_COOLDOWN) {
-        const remainingMinutes = Math.ceil((SESSION_COOLDOWN - (now - lastStart)) / 60000)
-        toast.error(`Please wait ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''} before starting a new session`)
-        return
-      }
-
-      // Set the device as starting
-      setStartingDevices(prev => ({ ...prev, [deviceId]: true }))
-
-      // Find the device to get its hashedMACAddress
-      const device = devices.find(d => d.id === deviceId)
-      if (!device) {
-        throw new Error("Device not found")
-      }
-
-      // Start the session using hashedMACAddress
-      await startSession(device.hashedMACAddress, token)
-      
-      // Update last session start time
-      setLastSessionStart(prev => ({ ...prev, [deviceId]: now }))
-      
-      // Fetch updated data immediately
-      await fetchDevices()
-      
-      toast.success("Tracking started. Awaiting first reading...")
-    } catch (err) {
-      console.error("Error starting session:", err)
-      toast.error("Failed to start session")
-    } finally {
-      // Remove the device from starting state
-      setStartingDevices(prev => ({ ...prev, [deviceId]: false }))
-    }
-  }
-
-  const getDeviceStatus = (device: Device) => {
-    const isOffline = isDeviceOffline(device);
-    const isStarting = startingDevices[device.id];
-    // Only use battery level if it's a valid number
-    const batteryLevel = typeof device.battery === 'number' && device.battery >= 0 ? device.battery : undefined;
-    return { isOffline, batteryLevel, isStarting };
   }
 
   return (
@@ -304,18 +260,7 @@ export default function DevicesPage() {
         <div className="space-y-6 px-2 py-4 lg:pl-0 lg:pt-16">
           <div className="mb-6 space-y-2 text-center">
             <h1 className="text-2xl font-bold">My Devices</h1>
-            <p className="text-muted-foreground">Device paired? Turn it on, start a session, and we'll do the rest.</p>
-          </div>
-
-          <div className="w-full lg:mx-auto lg:max-w-[66%] mb-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchDevices}
-              disabled={loading}
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
+            <p className="text-muted-foreground">Device paired? Turn it on and refresh.</p>
           </div>
 
           {error && (
@@ -340,69 +285,61 @@ export default function DevicesPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
+              <div className="w-full lg:mx-auto lg:max-w-[66%] mb-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchDevices}
+                  disabled={loading}
+                >
+                  {loading ? "Refreshing..." : "Refresh"}
+                </Button>
+              </div>
               {devices.map((device) => {
-                const { isOffline, batteryLevel, isStarting } = getDeviceStatus(device)
-                const now = Date.now()
-                const lastStart = lastSessionStart[device.id] || 0
-                const isInCooldown = now - lastStart < SESSION_COOLDOWN
+                const isOffline = isDeviceOffline(device)
 
                 return (
                   <TooltipProvider delayDuration={100} key={device.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div
-                          className={`flex flex-col gap-2 rounded-lg border p-5 pr-2 transition-all duration-200 ${
-                            isStarting 
-                              ? "hover:shadow-md hover:border-[#5DA9E9] cursor-pointer" 
-                              : isOffline
-                                ? "bg-gray-100 opacity-70"
-                                : "hover:shadow-md hover:border-[#5DA9E9] cursor-pointer"
-                          } w-full lg:mx-auto lg:max-w-[66%]`}
-                          onClick={() => isStarting && navigateToDeviceDetails(device.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
+                    <div
+                      className={`flex flex-col gap-2 rounded-lg border p-5 pr-2 transition-all duration-200 hover:shadow-md hover:border-[#5DA9E9] cursor-pointer ${
+                        isOffline ? "bg-gray-100 opacity-70" : ""
+                      } w-full lg:mx-auto lg:max-w-[66%]`}
+                      onClick={() => navigateToDeviceDetails(device.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                               <div className={`${
                                 isOffline ? "bg-gray-400" : "bg-[#5DA9E9] hover:bg-[#4A98D8]"
                               } text-white px-3 py-1 rounded-md font-medium`}>
                                 Device {device.id}
                               </div>
-                              <span className={`text-sm font-medium ${getBatteryColor(batteryLevel || 0, isOffline)} flex items-center gap-1`}>
-                                {getBatteryIcon(batteryLevel || 0, isOffline)} {formatBatteryLevel(batteryLevel || 0, isOffline)}
-                              </span>
-                              <span className="text-sm text-muted-foreground">
-                                {isStarting ? "Loading..." : isOffline ? "OFF" : "ON"}
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive/80 shrink-0"
-                              onClick={(e) => confirmRemoveDevice(device.id, e)}
-                            >
-                              <Trash className="mr-1 h-4 w-4" />
-                              <span className="hidden sm:inline">Remove</span>
-                            </Button>
-                          </div>
-                          <div className="border-t border-gray-200 my-2"></div>
-                          <div className="pl-0">
-                            <button
-                              className={`text-sm font-semibold ${isInCooldown || isStarting ? "text-muted-foreground cursor-not-allowed" : "text-black hover:text-gray-700 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"}`}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleStartSession(device.id)
-                              }}
-                              disabled={isInCooldown || isStarting}
-                            >
-                              {isStarting ? "Starting..." : isInCooldown ? "Session in Progress" : "Start a New Session"}
-                            </button>
-                          </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Click to View Moisture Data
+                            </TooltipContent>
+                          </Tooltip>
+                          <span className={`text-sm font-medium ${getBatteryColor(device.battery || 0, isOffline)} flex items-center gap-1`}>
+                            {getBatteryIcon(device.battery || 0, isOffline)} {formatBatteryLevel(device.battery || 0, isOffline)}
+                          </span>
+                          <span className={`text-sm font-semibold ${
+                            isOffline ? "text-muted-foreground" : "text-green-500"
+                          }`}>
+                            {isOffline ? "OFF" : "ON"}
+                          </span>
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Click to view moisture data of the current session
-                      </TooltipContent>
-                    </Tooltip>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive/80 shrink-0"
+                          onClick={(e) => confirmRemoveDevice(device.id, e)}
+                        >
+                          <Trash className="mr-1 h-4 w-4" />
+                          <span className="hidden sm:inline">Remove</span>
+                        </Button>
+                      </div>
+                    </div>
                   </TooltipProvider>
                 )
               })}

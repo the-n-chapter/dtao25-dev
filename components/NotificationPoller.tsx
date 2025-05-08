@@ -1,7 +1,12 @@
 "use client"
 import { useEffect } from "react";
-import { getMyProfile, getCurrentSessionDatapoints, startSession } from "@/lib/front_end_api_service";
+import { getMyProfile, getCurrentSessionDatapoints } from "@/lib/front_end_api_service";
 import { notificationService } from "@/lib/services/notification-service";
+
+interface Datapoint {
+  value: number;
+  createdAt: string;
+}
 
 export function NotificationPoller() {
   useEffect(() => {
@@ -12,15 +17,20 @@ export function NotificationPoller() {
         const { devices: userDevices, username } = await getMyProfile(token);
         if (userDevices && username) {
           for (const device of userDevices) {
+            console.log('Device data:', {
+              deviceId: device.id,
+              battery: device.battery,
+              username
+            });
+            
             // Handle battery updates
             notificationService.handleBatteryUpdate(username, device.id, device.battery);
-
-            // Start a new session to get fresh moisture data
-            await startSession(device.hashedMACAddress, token);
             
             // Get current session datapoints
             const sessionData = await getCurrentSessionDatapoints(device.id, token);
-            const latestDatapoint = sessionData.datapoints[0]; // Get first datapoint as it's the latest
+            // Filter out session delimiter datapoints (value = -1) and get the latest actual datapoint
+            const validDatapoints = sessionData.datapoints.filter((dp: Datapoint) => dp.value !== -1);
+            const latestDatapoint = validDatapoints[validDatapoints.length - 1]; // Get last datapoint as it's the latest
             
             if (latestDatapoint) {
               const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100);

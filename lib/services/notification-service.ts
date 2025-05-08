@@ -192,22 +192,47 @@ class NotificationService {
   }
 
   handleBatteryUpdate(username: string, deviceId: string, batteryLevel: number) {
+    console.log('Battery Update Called:', {
+      username,
+      deviceId,
+      batteryLevel,
+      timestamp: new Date().toISOString()
+    });
+
     const settings = this.getUserSettings(username)
-    if (!settings?.batteryNotifications) return
+    console.log('User Settings:', settings);
+
+    if (!settings?.batteryNotifications) {
+      console.log('Battery notifications disabled for user');
+      return;
+    }
 
     // Get user's custom battery thresholds
     const batteryThresholds = settings.selectedBatteryTags || []
-    if (batteryThresholds.length === 0) return
+    console.log('Battery Thresholds:', batteryThresholds);
+
+    if (batteryThresholds.length === 0) {
+      console.log('No battery thresholds configured');
+      return;
+    }
 
     // Convert threshold strings to numbers (remove % and convert to number)
     const thresholds = batteryThresholds.map((t: string) => parseInt(t.replace('%', '')))
     // Sort thresholds in descending order to handle them from highest to lowest
     thresholds.sort((a: number, b: number) => b - a)
+    console.log('Parsed Thresholds:', thresholds);
 
     for (const threshold of thresholds) {
       const alertKey = `${deviceId}-${threshold}`;
       const prevKey = `${deviceId}-${threshold}-prev`;
       const prevLevel = this.notificationState.previousBatteryLevel?.[prevKey];
+
+      console.log('Checking Threshold:', {
+        threshold,
+        alertKey,
+        prevLevel,
+        currentAlertState: this.notificationState.batteryAlertActive[alertKey]
+      });
 
       // Initialize previousBatteryLevel if it doesn't exist
       if (!this.notificationState.previousBatteryLevel) {
@@ -216,6 +241,7 @@ class NotificationService {
 
       // Case 1: Exact threshold match for 0% and 100%
       if ((threshold === 0 || threshold === 100) && batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
+        console.log('Triggering notification - exact threshold match');
         this.notificationState.batteryAlertActive[alertKey] = true;
         const title = `Device ${deviceId}: Battery Level Alert`;
         const description = `Battery level has reached ${batteryLevel}%.`;
@@ -228,17 +254,16 @@ class NotificationService {
         this.addNotification(title, description, 'battery', deviceId, threshold);
         this.updateLastNotificationTime(deviceId);
       }
-      // Case 2: First time crossing below threshold (for non-0% and non-100% thresholds)
+      // Case 2: Below threshold for non-0% and non-100% thresholds
       else if (
         threshold !== 0 && threshold !== 100 &&
-        prevLevel !== undefined &&
-        prevLevel > threshold &&
         batteryLevel < threshold &&
         !this.notificationState.batteryAlertActive[alertKey]
       ) {
+        console.log('Triggering notification - below threshold');
         this.notificationState.batteryAlertActive[alertKey] = true;
         const title = `Device ${deviceId}: Battery Level Alert`;
-        const description = `Battery level has dropped below ${threshold}% (currently at ${batteryLevel}%).`;
+        const description = `Battery level is currently at ${batteryLevel}%.`;
         
         toast.info(title, {
           description,
@@ -251,10 +276,13 @@ class NotificationService {
 
       // Reset alert state when battery level changes from threshold
       if (threshold === 0 && batteryLevel > 0) {
+        console.log('Resetting alert state - battery above 0%');
         this.notificationState.batteryAlertActive[alertKey] = false;
       } else if (threshold === 100 && batteryLevel < 100) {
+        console.log('Resetting alert state - battery below 100%');
         this.notificationState.batteryAlertActive[alertKey] = false;
       } else if (threshold !== 0 && threshold !== 100 && batteryLevel > threshold) {
+        console.log('Resetting alert state - battery above threshold');
         this.notificationState.batteryAlertActive[alertKey] = false;
       }
 
@@ -338,7 +366,7 @@ class NotificationService {
         toast.info(title, {
           description,
           duration: NOTIFICATION_DURATION,
-          richColors: false,
+          richColors: true,
         });
         this.addNotification(title, description, 'moisture', deviceId, min);
         this.updateLastNotificationTime(deviceId)

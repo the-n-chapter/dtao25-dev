@@ -12,11 +12,9 @@ export interface Notification {
 
 export interface NotificationSettings {
   moistureNotifications: boolean
-  moistureLow: boolean
-  moistureDry: boolean
+  selectedMoistureTags: string[]
   batteryNotifications: boolean
-  batteryFull: boolean
-  batteryLow: boolean
+  selectedBatteryTags: string[]
 }
 
 export interface NotificationState {

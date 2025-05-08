@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "@/components/chart"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { getDeviceById, getCurrentSessionDatapoints, startSession } from "@/lib/front_end_api_service"
+import { getDeviceById, getCurrentSessionDatapoints } from "@/lib/front_end_api_service"
 import { estimateTimeRemainingLR } from '@/lib/utils'
 
 type Device = {
@@ -76,9 +76,6 @@ export default function DeviceDetailsPage() {
         return
       }
 
-      // Start a new session to get fresh data
-      await startSession(deviceId, token)
-      
       // Fetch updated data
       await fetchDeviceData()
     } catch (err) {
