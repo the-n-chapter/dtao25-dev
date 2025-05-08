@@ -85,24 +85,20 @@ const TagDropdown: React.FC<TagDropdownProps> = ({
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [error, setError] = useState('')
+  const [isClient, setIsClient] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [username, setUsername] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-
-  // Notification settings
-  const [moistureNotifications, setMoistureNotifications] = useState(() => true)
-  const [batteryNotifications, setBatteryNotifications] = useState(() => true)
-  const [selectedBatteryTags, setSelectedBatteryTags] = useState<string[]>(['0%', '100%'])
-  const [selectedMoistureTags, setSelectedMoistureTags] = useState<string[]>(['0-2%'])
-
-  const batteryOptions = ['100%', '50%', '0%']
-  const moistureOptions = ['0-2%', '10-15%', '20-25%', '50-55%']
-
-  // Delete account
+  const [error, setError] = useState("")
+  const [moistureNotifications, setMoistureNotifications] = useState(false)
+  const [batteryNotifications, setBatteryNotifications] = useState(false)
+  const [selectedBatteryTags, setSelectedBatteryTags] = useState<string[]>([])
+  const [selectedMoistureTags, setSelectedMoistureTags] = useState<string[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
   const [agreeToDelete, setAgreeToDelete] = useState(false)
 
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const batteryOptions = ['100%', '50%', '0%']
+  const moistureOptions = ['0-2%', '10-15%', '20-25%', '50-55%']
 
   const handleBatteryTagSelect = (tag: string) => {
     if (!selectedBatteryTags.includes(tag)) {
@@ -139,6 +135,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    setIsClient(true)
     // Check authentication
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -183,7 +180,7 @@ export default function SettingsPage() {
     }
   }, [router])
 
-  if (!isAuthenticated) {
+  if (!isClient || !isAuthenticated) {
     return null
   }
 

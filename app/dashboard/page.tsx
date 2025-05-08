@@ -1,14 +1,16 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { PlusCircle, List } from "lucide-react"
 
 export default function DashboardPage() {
   const router = useRouter()
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
     // Check authentication
     const token = localStorage.getItem("authToken")
     if (!token) {
@@ -22,6 +24,11 @@ export default function DashboardPage() {
       router.push("/login")
     }
   }, [router])
+
+  // Don't render anything until we're on the client side
+  if (!isClient) {
+    return null
+  }
 
   return (
     <div className="p-8">

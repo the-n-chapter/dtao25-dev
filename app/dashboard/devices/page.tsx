@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Trash, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react"
@@ -40,7 +40,7 @@ type Device = {
 
 const OFFLINE_THRESHOLD = 10 * 60 * 1000 // 10 minutes in milliseconds
 
-export default function DevicesPage() {
+function DevicesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [devices, setDevices] = useState<Device[]>([])
@@ -69,15 +69,8 @@ export default function DevicesPage() {
             // Get current session datapoints
             const { datapoints } = await getCurrentSessionDatapoints(device.id, token)
             
-            console.log('Current Session Datapoints:', {
-              deviceId: device.id,
-              datapointsCount: datapoints?.length,
-              firstDatapoint: datapoints?.[0]
-            });
-            
             // Ensure we have valid datapoints
             if (!datapoints || !Array.isArray(datapoints)) {
-              console.error(`Invalid current session response for device ${device.id}`);
               return {
                 ...device,
                 datapoints: []
@@ -92,8 +85,7 @@ export default function DevicesPage() {
               ...device,
               datapoints: validDatapoints
             }
-          } catch (error) {
-            console.error(`Error fetching current session for device ${device.id}:`, error)
+          } catch {
             return {
               ...device,
               datapoints: []
@@ -114,9 +106,11 @@ export default function DevicesPage() {
         }
 
         if (devicesWithDatapoints && username) {
-          devicesWithDatapoints.forEach(device => {
-            notificationService.handleBatteryUpdate(username, device.id, device.battery)
-            const validDatapoints = device.datapoints.filter(dp => dp.value !== -1);
+          devicesWithDatapoints.forEach((device: Device) => {
+            if (typeof device.battery === 'number') {
+              notificationService.handleBatteryUpdate(username, device.id, device.battery)
+            }
+            const validDatapoints = device.datapoints.filter((dp: Datapoint) => dp.value !== -1);
             const latestDatapoint = validDatapoints[validDatapoints.length - 1];
             if (latestDatapoint) {
               const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100)
@@ -125,8 +119,7 @@ export default function DevicesPage() {
           })
         }
       }
-    } catch (err) {
-      console.error("Error fetching devices:", err)
+    } catch {
       setError("Failed to load devices")
     } finally {
       setLoading(false)
@@ -210,34 +203,16 @@ export default function DevicesPage() {
 
   const isDeviceOffline = (device: Device) => {
     if (!device.datapoints || device.datapoints.length === 0) {
-      console.log('Device Status Debug - No datapoints:', {
-        deviceId: device.id,
-        hasDatapoints: !!device.datapoints,
-        datapointsLength: device.datapoints?.length
-      });
       return true;
     }
     
-    const validDatapoints = device.datapoints.filter(dp => dp.value !== -1);
+    const validDatapoints = device.datapoints.filter((dp: { value: number }) => dp.value !== -1);
     const lastDatapoint = validDatapoints[validDatapoints.length - 1];
     if (!lastDatapoint) return true;
     
     const lastDataTime = new Date(lastDatapoint.createdAt).getTime();
     const currentTime = Date.now();
     const timeSinceLastData = currentTime - lastDataTime;
-    
-    console.log('Device Status Debug:', {
-      deviceId: device.id,
-      lastDataTime: new Date(lastDataTime).toISOString(),
-      currentTime: new Date(currentTime).toISOString(),
-      timeSinceLastData,
-      timeSinceLastDataInMinutes: Math.round(timeSinceLastData / (60 * 1000)),
-      threshold: OFFLINE_THRESHOLD,
-      thresholdInMinutes: Math.round(OFFLINE_THRESHOLD / (60 * 1000)),
-      isOffline: timeSinceLastData > OFFLINE_THRESHOLD,
-      datapointsCount: device.datapoints.length,
-      firstDatapoint: device.datapoints[0]
-    });
     
     return timeSinceLastData > OFFLINE_THRESHOLD;
   }
@@ -367,5 +342,17 @@ export default function DevicesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function DevicesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center p-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#5DA9E9] border-t-transparent"></div>
+      </div>
+    }>
+      <DevicesContent />
+    </Suspense>
   )
 }

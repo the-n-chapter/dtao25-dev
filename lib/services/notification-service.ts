@@ -35,32 +35,36 @@ class NotificationService {
   }
 
   private constructor() {
-    // Load notifications from localStorage on initialization
-    const savedNotifications = localStorage.getItem('notifications')
-    if (savedNotifications) {
-      this.notificationState.notifications = JSON.parse(savedNotifications)
-    }
+    if (typeof window !== 'undefined') {
+      // Load notifications from localStorage on initialization
+      const savedNotifications = localStorage.getItem('notifications')
+      if (savedNotifications) {
+        this.notificationState.notifications = JSON.parse(savedNotifications)
+      }
 
-    // Load alert states from localStorage
-    const savedAlertStates = localStorage.getItem('notificationAlertStates')
-    if (savedAlertStates) {
-      const states = JSON.parse(savedAlertStates)
-      this.notificationState.batteryAlertActive = states.batteryAlertActive || {}
-      this.notificationState.moistureAlertActive = states.moistureAlertActive || {}
-      this.notificationState.previousBatteryLevel = states.previousBatteryLevel || {}
-      this.notificationState.previousMoistureLevel = states.previousMoistureLevel || {}
+      // Load alert states from localStorage
+      const savedAlertStates = localStorage.getItem('notificationAlertStates')
+      if (savedAlertStates) {
+        const states = JSON.parse(savedAlertStates)
+        this.notificationState.batteryAlertActive = states.batteryAlertActive || {}
+        this.notificationState.moistureAlertActive = states.moistureAlertActive || {}
+        this.notificationState.previousBatteryLevel = states.previousBatteryLevel || {}
+        this.notificationState.previousMoistureLevel = states.previousMoistureLevel || {}
+      }
     }
   }
 
   private saveNotifications() {
-    localStorage.setItem('notifications', JSON.stringify(this.notificationState.notifications))
-    // Save alert states to localStorage
-    localStorage.setItem('notificationAlertStates', JSON.stringify({
-      batteryAlertActive: this.notificationState.batteryAlertActive,
-      moistureAlertActive: this.notificationState.moistureAlertActive,
-      previousBatteryLevel: this.notificationState.previousBatteryLevel,
-      previousMoistureLevel: this.notificationState.previousMoistureLevel
-    }))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('notifications', JSON.stringify(this.notificationState.notifications))
+      // Save alert states to localStorage
+      localStorage.setItem('notificationAlertStates', JSON.stringify({
+        batteryAlertActive: this.notificationState.batteryAlertActive,
+        moistureAlertActive: this.notificationState.moistureAlertActive,
+        previousBatteryLevel: this.notificationState.previousBatteryLevel,
+        previousMoistureLevel: this.notificationState.previousMoistureLevel
+      }))
+    }
   }
 
   // Clean up notifications older than 72 hours (3 days)
@@ -129,6 +133,7 @@ class NotificationService {
   }
 
   private getUserSettings(username: string) {
+    if (typeof window === 'undefined') return null
     const settingsStr = localStorage.getItem(`${username}-notifications`)
     if (!settingsStr) return null
     return JSON.parse(settingsStr)
