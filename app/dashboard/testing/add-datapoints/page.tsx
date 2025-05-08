@@ -52,7 +52,7 @@ export default function AddDatapointsPage() {
       if (!lastDatapoint) {
         // First datapoint for this device
         nextValue = 3300
-        nextBattery = 100
+        nextBattery = 12
       } else {
         // Calculate next values with downtrend
         nextValue = Math.max(0, lastDatapoint.value - 30) // Decrease by 30, minimum 0
