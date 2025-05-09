@@ -110,7 +110,7 @@ export default function DeviceDetailsPage() {
       createdAt: dp.createdAt
     }));
     const ms = estimateTimeRemainingLR(datapoints, 0);
-    if (!isFinite(ms) || ms < 0) return '0 min';
+    if (!isFinite(ms) || ms < 0) return 'Estimating...';
     const hours = Math.floor(ms / 3600000);
     const mins = Math.round((ms % 3600000) / 60000);
     if (hours < 1 && mins < 1) return 'Less than 1 min';
@@ -193,7 +193,7 @@ export default function DeviceDetailsPage() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="mb-4 text-9xl font-bold cursor-help">
+                      <div className="mb-4 text-8xl font-bold cursor-help">
                         <span className={getMoistureColor(currentMoisturePercentage)}>{currentMoisturePercentage}%</span>
                       </div>
                     </TooltipTrigger>

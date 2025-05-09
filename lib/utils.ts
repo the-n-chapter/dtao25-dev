@@ -36,11 +36,11 @@ export function getSessionRegression(datapoints: { value: number, createdAt: str
 
 /**
  * Estimate remaining time (ms) until `targetValue` is reached, using regression.
- * Returns Infinity if slope ≥ 0 (getting wetter) or not enough data.
+ * Returns Infinity if not enough data.
  */
 export function estimateTimeRemainingLR(datapoints: { value: number, createdAt: string }[], targetValue = 0) {
   const { slope, intercept, datapoints: session } = getSessionRegression(datapoints);
-  if (slope >= 0 || session.length < 2) return Infinity;
+  if (session.length < 2) return Infinity;
   const SECOND = 1000;
   const nowSeconds = (Date.now() - new Date(session[0].createdAt).getTime()) / 1000;
   const currentVal = slope * nowSeconds + intercept;
