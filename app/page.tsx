@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from 'react'
 import Link from "next/link"
+import { PublicNav } from "@/components/public-nav"
 
 export default function WelcomePage() {
   const [text, setText] = useState('');
@@ -62,60 +63,60 @@ export default function WelcomePage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white p-8">
-      <div className="w-full max-w-6xl px-8 md:pr-28 lg:pr-40 xl:pr-56 2xl:pr-72">
-        {/* Mobile Layout */}
-        <div className="md:hidden text-center">
-          <h1 className="text-4xl font-light mt-2">
-            Hi, 
-            <span className="text-black ml-2">
-              {text.split(' ')[0]} 
-            </span>
-            <span className="text-[#5DA9E9] ml-2">
-              {text.split(' ')[1]}
-            </span>
-            <span className={`inline-block text-[#5DA9E9] ${isBlinking ? 'opacity-0' : 'opacity-100'}`}>_</span>
-          </h1>
-          <div className="mt-8">
-            <Link 
-              href="/signup" 
-              className="inline-flex items-center justify-center rounded-full border border-[#5DA9E9] bg-white px-8 py-4 text-xl font-medium text-[#5DA9E9] hover:bg-[#5DA9E9] hover:text-white transition-colors"
-            >
-              Get Started
-            </Link>
+    <div className="flex min-h-screen flex-col">
+      <PublicNav />
+      <div className="flex flex-1 flex-col items-center justify-center bg-background p-8">
+        <div className="w-full max-w-6xl px-8 md:pr-28 lg:pr-40 xl:pr-56 2xl:pr-72">
+          {/* Mobile Layout */}
+          <div className="md:hidden text-center">
+            <h1 className="text-4xl font-light">
+              Hi, 
+              <span className="text-foreground ml-2">
+                {text.split(' ')[0]} 
+              </span>
+              <span className="text-[#5DA9E9] ml-2">
+                {text.split(' ')[1]}
+              </span>
+              <span className={`inline-block text-[#5DA9E9] ${isBlinking ? 'opacity-0' : 'opacity-100'}`}>_</span>
+            </h1>
+            <div className="mt-8">
+              <Link 
+                href="/signup" 
+                className="inline-flex items-center justify-center rounded-full border border-[#5DA9E9] bg-background px-8 py-4 text-xl font-medium text-[#5DA9E9] hover:bg-[#5DA9E9] hover:text-white transition-colors"
+              >
+                Get Started
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden md:block">
-          <p className="text-2xl font-bold text-[#5DA9E9] mt-2 mb-10">
-            pintell
-          </p>
-          <h1 className="text-5xl font-light mb-8">
-            Hi, 
-            <span className="text-black ml-2">
-              {text.split(' ')[0]} 
-            </span>
-            <span className="text-[#5DA9E9] ml-2">
-              {text.split(' ')[1]}
-            </span>
-            <span className={`inline-block text-[#5DA9E9] ${isBlinking ? 'opacity-0' : 'opacity-100'}`}>_</span>
-          </h1>
-          
-          {/* Continuous paragraph text with automatic wrapping */}
-          <div className="space-y-6 text-left">
-            <p className="text-5xl text-gray-600 font-light">
-              tired of guessing if your clothes are dry<span className="text-[#5DA9E9]"> ¿</span> we does the thinking for you. just clip it on, <span className="text-[#5DA9E9]">●</span> connect to the app, <span className="text-[#5DA9E9]">&</span> let we take care of the rest <span className="text-[#5DA9E9]">*</span>.
-            </p>
-          </div>
-          
-          <div className="mt-12">
-            <Link 
-              href="/signup" 
-              className="inline-flex items-center justify-center rounded-full border border-[#5DA9E9] bg-white px-8 py-4 text-2xl font-medium text-[#5DA9E9] hover:bg-[#5DA9E9] hover:text-white transition-colors"
-            >
-              Get Started
-            </Link>
+          {/* Desktop Layout */}
+          <div className="hidden md:block">
+            <h1 className="text-5xl font-light mb-8">
+              Hi, 
+              <span className="text-foreground ml-2">
+                {text.split(' ')[0]} 
+              </span>
+              <span className="text-[#5DA9E9] ml-2">
+                {text.split(' ')[1]}
+              </span>
+              <span className={`inline-block text-[#5DA9E9] ${isBlinking ? 'opacity-0' : 'opacity-100'}`}>_</span>
+            </h1>
+            
+            {/* Continuous paragraph text with automatic wrapping */}
+            <div className="space-y-6 text-left">
+              <p className="text-5xl text-muted-foreground font-light">
+                tired of guessing if your clothes are dry<span className="text-[#5DA9E9]"> ¿</span> we does the thinking for you. just clip it on, <span className="text-[#5DA9E9]">●</span> connect to the app, <span className="text-[#5DA9E9]">&</span> let we take care of the rest <span className="text-[#5DA9E9]">*</span>.
+              </p>
+            </div>
+            
+            <div className="mt-12">
+              <Link 
+                href="/signup" 
+                className="inline-flex items-center justify-center rounded-full border border-[#5DA9E9] bg-background px-8 py-4 text-2xl font-medium text-[#5DA9E9] hover:bg-[#5DA9E9] hover:text-white transition-colors"
+              >
+                Get Started
+              </Link>
+            </div>
           </div>
         </div>
       </div>
