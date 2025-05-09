@@ -244,8 +244,8 @@ class NotificationService {
         this.notificationState.previousBatteryLevel = {};
       }
 
-      // Case 1: Exact threshold match for 0% and 100%
-      if ((threshold === 0 || threshold === 100) && batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
+      // Case 1: Exact threshold match for 100%
+      if (threshold === 100 && batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
         console.log('Triggering notification - exact threshold match');
         this.notificationState.batteryAlertActive[alertKey] = true;
         const title = `Device ${deviceId}: Battery Level Alert`;
@@ -259,12 +259,8 @@ class NotificationService {
         this.addNotification(title, description, 'battery', deviceId, threshold);
         this.updateLastNotificationTime(deviceId);
       }
-      // Case 2: Below threshold for non-0% and non-100% thresholds
-      else if (
-        threshold !== 0 && threshold !== 100 &&
-        batteryLevel < threshold &&
-        !this.notificationState.batteryAlertActive[alertKey]
-      ) {
+      // Case 2: Below threshold for non-100% thresholds
+      else if (threshold !== 100 && batteryLevel < threshold && !this.notificationState.batteryAlertActive[alertKey]) {
         console.log('Triggering notification - below threshold');
         this.notificationState.batteryAlertActive[alertKey] = true;
         const title = `Device ${deviceId}: Battery Level Alert`;
@@ -280,13 +276,10 @@ class NotificationService {
       }
 
       // Reset alert state when battery level changes from threshold
-      if (threshold === 0 && batteryLevel > 0) {
-        console.log('Resetting alert state - battery above 0%');
-        this.notificationState.batteryAlertActive[alertKey] = false;
-      } else if (threshold === 100 && batteryLevel < 100) {
+      if (threshold === 100 && batteryLevel < 100) {
         console.log('Resetting alert state - battery below 100%');
         this.notificationState.batteryAlertActive[alertKey] = false;
-      } else if (threshold !== 0 && threshold !== 100 && batteryLevel > threshold) {
+      } else if (threshold !== 100 && batteryLevel > threshold) {
         console.log('Resetting alert state - battery above threshold');
         this.notificationState.batteryAlertActive[alertKey] = false;
       }
