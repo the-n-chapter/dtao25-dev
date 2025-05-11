@@ -20,6 +20,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
 interface User {
   id: number
   username: string
@@ -96,6 +105,7 @@ export default function SettingsPage() {
   const [selectedMoistureTags, setSelectedMoistureTags] = useState<string[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
   const [agreeToDelete, setAgreeToDelete] = useState(false)
+  const [accountDeleted, setAccountDeleted] = useState(false)
 
   const batteryOptions = ['100%', '50%', '2%']
   const moistureOptions = ['0-2%', '10-15%', '20-25%', '50-55%']
@@ -243,7 +253,7 @@ export default function SettingsPage() {
         throw apiError
       }
 
-      toast.success('Account deleted successfully')
+      setAccountDeleted(true)
 
       sessionStorage.setItem('intentionalLogout', 'true')
       
@@ -251,10 +261,6 @@ export default function SettingsPage() {
       localStorage.removeItem('currentUser')
       localStorage.removeItem('authToken')
 
-      setTimeout(() => {
-        sessionStorage.removeItem('intentionalLogout')
-        router.push('/')
-      }, 2000)
     } catch (error) {
       let message = 'Failed to delete account. Please try again.'
       const err = error as { response?: { data?: ApiErrorResponse } }
@@ -409,6 +415,33 @@ export default function SettingsPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* ---------- Success dialog ---------- */}
+      <Dialog open={accountDeleted /* no onOpenChange */}>
+        <DialogContent
+          /* block ESC & backdrop click */
+          onEscapeKeyDown={e => e.preventDefault()}
+          onPointerDownOutside={e => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Account deleted successfully.</DialogTitle>
+            <DialogDescription>
+              We’re sorry to see you go, and we hope to welcome you back anytime.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setAccountDeleted(false)   // close dialog
+                router.push("/")           // then leave the page
+              }}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
