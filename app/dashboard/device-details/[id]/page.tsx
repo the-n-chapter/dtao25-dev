@@ -58,11 +58,6 @@ export default function DeviceDetailsPage() {
       const sessionData = await getCurrentSessionDatapoints(deviceId, token)
       setCurrentSession(sessionData)
 
-      // Calculate max moisture value from session data
-      if (sessionData?.datapoints?.length > 0) {
-        const maxValue = Math.max(...sessionData.datapoints.map(dp => dp.value))
-        setMaxMoistureValue(maxValue) // NOT enforce minimum here
-      }
     } catch (err) {
       setError("Failed to load device data")
       console.error("Error loading device data:", err)
@@ -106,16 +101,17 @@ export default function DeviceDetailsPage() {
   }
 
   const convertToPercentage = (value: number) => {
-    if (maxMoistureValue < 100) {
-      // Special case: everything read is very low, likely dry item
-      // Scale linearly but compress to a max of 10% to reflect near-dry
-      return Math.round((value / 100) * 10)
-    } else {
-      // Normal behavior
-      const effectiveMax = Math.max(maxMoistureValue, MIN_MOISTURE_THRESHOLD)
-      return Math.min(100, Math.round((value / effectiveMax) * 100))
+    const actualMax = currentSession?.datapoints?.length
+      ? Math.max(...currentSession.datapoints.map(dp => dp.value))
+      : maxMoistureValue;
+  
+    if (actualMax < 100) {
+      return Math.round((value / 100) * 10);
     }
-  }
+  
+    const effectiveMax = Math.max(actualMax, MIN_MOISTURE_THRESHOLD);
+    return Math.min(100, Math.round((value / effectiveMax) * 100));
+  };
 
   // Regression-based drying time estimate (to 0% moisture)
   const getEstimatedDryingTime = () => {
