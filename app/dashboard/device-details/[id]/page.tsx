@@ -39,6 +39,8 @@ export default function DeviceDetailsPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [showPercentage, setShowPercentage] = useState(true)
+  const [maxMoistureValue, setMaxMoistureValue] = useState(3300) // Default max value
+  const MIN_MOISTURE_THRESHOLD = 100 // Minimum threshold to prevent false 100% readings
 
   const fetchDeviceData = async () => {
     try {
@@ -55,6 +57,12 @@ export default function DeviceDetailsPage() {
       // Get current session data
       const sessionData = await getCurrentSessionDatapoints(deviceId, token)
       setCurrentSession(sessionData)
+
+      // Calculate max moisture value from session data
+      if (sessionData?.datapoints?.length > 0) {
+        const maxValue = Math.max(...sessionData.datapoints.map(dp => dp.value))
+        setMaxMoistureValue(Math.max(maxValue, MIN_MOISTURE_THRESHOLD))
+      }
     } catch (err) {
       setError("Failed to load device data")
       console.error("Error loading device data:", err)
@@ -98,15 +106,17 @@ export default function DeviceDetailsPage() {
   }
 
   const convertToPercentage = (value: number) => {
-    return Math.round((value / 3300) * 100);
+    // Ensure we don't divide by zero and respect minimum threshold
+    const effectiveMax = Math.max(maxMoistureValue, MIN_MOISTURE_THRESHOLD)
+    return Math.round((value / effectiveMax) * 100)
   }
 
   // Regression-based drying time estimate (to 0% moisture)
   const getEstimatedDryingTime = () => {
     if (!currentSession || !currentSession.datapoints || currentSession.datapoints.length < 2) return 'Not enough data';
-    // Convert all values to percentage for regression
+    // Convert all values to percentage for regression using dynamic max
     const datapoints = currentSession.datapoints.map(dp => ({
-      value: Math.round((dp.value / 3300) * 100),
+      value: convertToPercentage(dp.value),
       createdAt: dp.createdAt
     }));
     const ms = estimateTimeRemainingLR(datapoints, 0);
