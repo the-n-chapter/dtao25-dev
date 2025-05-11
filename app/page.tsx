@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from "next/link"
 import { PublicNav } from "@/components/public-nav"
+import { motion } from "framer-motion"
 
 export default function WelcomePage() {
   const [text, setText] = useState('');
@@ -68,21 +69,20 @@ export default function WelcomePage() {
       <div className="flex flex-1 flex-col items-center justify-center bg-background p-8">
         <div className="w-full max-w-6xl px-8 md:pr-28 lg:pr-40 xl:pr-56 2xl:pr-72">
           {/* Mobile Layout */}
-          <div className="md:hidden text-center">
-            <h1 className="text-4xl font-light">
-              Hi, 
-              <span className="text-foreground ml-2">
-                {text.split(' ')[0]} 
+          <div className="md:hidden flex flex-col items-center text-center">
+            <h1 className="flex items-baseline justify-center gap-2 text-4xl font-light">
+              <span>Hi,</span>
+              <span className="text-foreground">{text.split(" ")[0]}</span>
+              <span className="text-[#5DA9E9]">
+                {text.split(" ")[1]}
+                <span className={isBlinking ? "opacity-0" : "opacity-100"}>_</span>
               </span>
-              <span className="text-[#5DA9E9] ml-2">
-                {text.split(' ')[1]}
-              </span>
-              <span className={`inline-block text-[#5DA9E9] ${isBlinking ? 'opacity-0' : 'opacity-100'}`}>_</span>
             </h1>
+
             <div className="mt-8">
-              <Link 
-                href="/signup" 
-                className="inline-flex items-center justify-center rounded-full border border-[#5DA9E9] bg-background px-8 py-4 text-xl font-medium text-[#5DA9E9] hover:bg-[#5DA9E9] hover:text-white transition-colors"
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center rounded-full border border-[#5DA9E9] bg-background px-8 py-4 text-xl font-medium text-[#5DA9E9] transition-colors hover:bg-[#5DA9E9] hover:text-white"
               >
                 Get Started
               </Link>
@@ -91,7 +91,7 @@ export default function WelcomePage() {
 
           {/* Desktop Layout */}
           <div className="hidden md:block">
-            <h1 className="text-5xl font-light mb-8">
+            <h1 className="text-5xl font-light mt-10 mb-8">
               Hi, 
               <span className="text-foreground ml-2">
                 {text.split(' ')[0]} 
@@ -103,9 +103,79 @@ export default function WelcomePage() {
             </h1>
             
             {/* Continuous paragraph text with automatic wrapping */}
-            <div className="space-y-6 text-left">
+            <div className="space-y-6 text-left mr-4">
               <p className="text-5xl text-muted-foreground font-light">
-                tired of guessing if your clothes are dry<span className="text-[#5DA9E9]"> ¿</span> we does the thinking for you. just clip it on, <span className="text-[#5DA9E9]">●</span> connect to the app, <span className="text-[#5DA9E9]">&</span> let we take care of the rest <span className="text-[#5DA9E9]">*</span>.
+                tired of guessing if clothes are dry {` `}
+                <motion.span 
+                  className="text-[#5DA9E9] inline-block"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  animate={{ 
+                    y: [0, -15, 0],
+                  }}
+                  transition={{ 
+                    y: {
+                      duration: 1.5,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    }
+                  }}
+                > ¿</motion.span> we do the <span className='italic'>thinking</span> for you. just clip the device on, {` `} 
+                <motion.span 
+                  className="text-[#5DA9E9] inline-block"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  animate={{ 
+                    scale: [1, 1.4, 1],
+                  }}
+                  transition={{ 
+                    scale: {
+                      duration: 1.5,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    }
+                  }}
+                > ●</motion.span> connect to the app, {` `}
+                <motion.span 
+                  className="text-[#5DA9E9] inline-block"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  animate={{ 
+                    rotate: [0, 20, 0, -20, 0],
+                  }}
+                  transition={{ 
+                    rotate: {
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    }
+                  }}
+                > &</motion.span> let we take care of the rest 
+                <motion.span 
+                  className="text-[#5DA9E9] inline-block"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  animate={{ 
+                    scale: [1, 1.4, 1],
+                    rotate: [0, 360],
+                  }}
+                  transition={{ 
+                    scale: {
+                      duration: 1.5,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    },
+                    rotate: {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }
+                  }}
+                > *</motion.span>.
               </p>
             </div>
             
