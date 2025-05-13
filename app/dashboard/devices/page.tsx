@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Trash, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react"
+import { ChevronLeft, Trash, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import {
@@ -261,14 +261,16 @@ function DevicesContent() {
           ) : (
             <div className="flex flex-col gap-3">
               <div className="w-full lg:mx-auto lg:max-w-[66%] mb-1">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchDevices}
-                  disabled={loading}
-                >
-                  {loading ? "Refreshing..." : "Refresh"}
-                </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchDevices}
+                disabled={loading}
+                className="text-[#5DA9E9] hover:text-[#4A98D8]"
+              >
+                <RefreshCw className="h-4 w-4 text-[#5DA9E9]" />
+                Refresh
+              </Button>
               </div>
               {devices.map((device) => {
                 const isOffline = isDeviceOffline(device)

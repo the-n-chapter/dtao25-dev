@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "@/components/chart"
@@ -187,13 +187,15 @@ export default function DeviceDetailsPage() {
 
         <div className="relative p-4 sm:p-5 md:p-6 lg:p-8">
           <div className="flex justify-between items-center mb-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-            >
-              Refresh
-            </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="text-[#5DA9E9] hover:text-[#4A98D8]"
+          >
+            <RefreshCw className="h-3 w-3 text-[#5DA9E9]" />
+            Refresh
+          </Button>
             <div className="text-sm text-muted-foreground">
               Last updated: {new Date(lastUpdated).toLocaleString()}
             </div>
