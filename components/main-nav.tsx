@@ -165,23 +165,25 @@ export function MainNav() {
             </SheetContent>
           </Sheet>
           {/* Light Mode Logo */}
-          <Image
-            src="/logo-light.svg"
-            alt="Pintell Logo Light"
-            width={72}
-            height={24}
-            className="h-8 w-auto sm:h-8 md:h-9 transition-opacity duration-300 dark:hidden"
-            priority
-          />
-          {/* Dark Mode Logo */}
-          <Image
-            src="/logo-dark.svg"
-            alt="Pintell Logo Dark"
-            width={72}
-            height={24}
-            className="h-8 w-auto sm:h-8 md:h-9 transition-opacity duration-300 hidden dark:block"
-            priority
-          />
+          <Link href="/dashboard" className="flex items-center">
+            <Image
+              src="/logo-light.svg"
+              alt="Pintell Logo Light"
+              width={72}
+              height={24}
+              className="h-8 w-auto sm:h-8 md:h-9 transition-opacity duration-300 dark:hidden"
+              priority
+            />
+            {/* Dark Mode Logo */}
+            <Image
+              src="/logo-dark.svg"
+              alt="Pintell Logo Dark"
+              width={72}
+              height={24}
+              className="h-8 w-auto sm:h-8 md:h-9 transition-opacity duration-300 hidden dark:block"
+              priority
+            />
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">
