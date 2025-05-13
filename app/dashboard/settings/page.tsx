@@ -107,8 +107,8 @@ export default function SettingsPage() {
   const [agreeToDelete, setAgreeToDelete] = useState(false)
   const [accountDeleted, setAccountDeleted] = useState(false)
 
-  const batteryOptions = ['100%', '50%', '2%']
-  const moistureOptions = ['0-2%', '10-15%', '20-25%', '50-55%']
+  const batteryOptions = ['2%', '20%', '100%']
+  const moistureOptions = ['0-2%', '10-15%', '20-25%']
 
   const handleBatteryTagSelect = (tag: string) => {
     if (!selectedBatteryTags.includes(tag)) {
@@ -133,7 +133,7 @@ export default function SettingsPage() {
   const handleBatteryNotificationsToggle = (checked: boolean) => {
     setBatteryNotifications(checked);
     if (checked && selectedBatteryTags.length === 0) {
-      setSelectedBatteryTags(['0%', '100%']);
+      setSelectedBatteryTags(['100%']);
     }
   };
 

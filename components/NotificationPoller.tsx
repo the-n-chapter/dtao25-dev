@@ -3,10 +3,12 @@ import { useEffect } from "react";
 import { getMyProfile, getCurrentSessionDatapoints } from "@/lib/front_end_api_service";
 import { notificationService } from "@/lib/services/notification-service";
 
-interface Datapoint {
+type Datapoint = {
   value: number;
   createdAt: string;
-}
+};
+
+const MIN_MOISTURE_THRESHOLD = 100; // Minimum threshold to prevent false 100% readings
 
 export function NotificationPoller() {
   useEffect(() => {
@@ -30,10 +32,20 @@ export function NotificationPoller() {
             const sessionData = await getCurrentSessionDatapoints(device.id, token);
             // Filter out session delimiter datapoints (value = -1) and get the latest actual datapoint
             const validDatapoints = sessionData.datapoints.filter((dp: Datapoint) => dp.value !== -1);
-            const latestDatapoint = validDatapoints[validDatapoints.length - 1]; // Get last datapoint as it's the latest
             
-            if (latestDatapoint) {
-              const moisturePercentage = Math.round((latestDatapoint.value / 3300) * 100);
+            if (validDatapoints.length > 0) {
+              // Calculate moisture percentage using the same method as device details page
+              const actualMax = Math.max(...validDatapoints.map((dp: Datapoint) => dp.value));
+              const latestValue = validDatapoints[validDatapoints.length - 1].value;
+              
+              let moisturePercentage;
+              if (actualMax < 100) {
+                moisturePercentage = Math.round((latestValue / 100) * 10);
+              } else {
+                const effectiveMax = Math.max(actualMax, MIN_MOISTURE_THRESHOLD);
+                moisturePercentage = Math.min(100, Math.round((latestValue / effectiveMax) * 100));
+              }
+              
               notificationService.handleMoistureUpdate(username, device.id, moisturePercentage);
             }
           }

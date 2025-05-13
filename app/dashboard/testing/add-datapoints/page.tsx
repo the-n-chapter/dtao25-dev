@@ -13,6 +13,8 @@ interface LastDatapoint {
 
 export default function AddDatapointsPage() {
   const [deviceId, setDeviceId] = useState("")
+  const [value, setValue] = useState("3300")
+  const [battery, setBattery] = useState("100")
   const [isLoading, setIsLoading] = useState(false)
   const [lastDatapoint, setLastDatapoint] = useState<LastDatapoint | null>(null)
 
@@ -33,7 +35,7 @@ export default function AddDatapointsPage() {
     }
   }, [deviceId])
 
-  const handleGenerateDatapoint = async (e: React.FormEvent) => {
+  const handleSubmitDatapoint = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
@@ -45,34 +47,34 @@ export default function AddDatapointsPage() {
         return
       }
 
-      // Calculate next values
-      let nextValue: number
-      let nextBattery: number
+      // Parse input values
+      const numericValue = parseInt(value)
+      const numericBattery = parseInt(battery)
 
-      if (!lastDatapoint) {
-        // First datapoint for this device
-        nextValue = 3300
-        nextBattery = 12
-      } else {
-        // Calculate next values with downtrend
-        nextValue = Math.max(0, lastDatapoint.value - 30) // Decrease by 30, minimum 0
-        nextBattery = Math.max(0, lastDatapoint.battery - 1) // Decrease by 1, minimum 0
+      // Validate inputs
+      if (isNaN(numericValue) || isNaN(numericBattery)) {
+        toast.error("Value and battery must be numbers")
+        return
       }
 
+      // Ensure values are within valid ranges
+      const validValue = Math.max(0, Math.min(3300, numericValue))
+      const validBattery = Math.max(0, Math.min(100, numericBattery))
+
       const datapoint = {
-        value: nextValue,
-        battery: nextBattery,
+        value: validValue,
+        battery: validBattery,
         deviceHashedMACAddress: deviceId
       }
 
       await createDatapoint(datapoint)
       
       // Update last datapoint
-      const newLastDatapoint = { value: nextValue, battery: nextBattery }
+      const newLastDatapoint = { value: validValue, battery: validBattery }
       setLastDatapoint(newLastDatapoint)
       localStorage.setItem(`lastDatapoint_${deviceId}`, JSON.stringify(newLastDatapoint))
 
-      toast.success(`Created datapoint: Value = ${nextValue}, Battery = ${nextBattery}%`)
+      toast.success(`Created datapoint: Value = ${validValue}, Battery = ${validBattery}%`)
     } catch (error) {
       console.error("Failed to generate datapoint:", error)
       toast.error("Failed to generate datapoint")
@@ -80,50 +82,6 @@ export default function AddDatapointsPage() {
       setIsLoading(false)
     }
   }
-
-  const handleGenerateIncreasingDatapoint = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      if (typeof window === 'undefined') return;
-      
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        toast.error("Please log in first");
-        return;
-      }
-
-      // Calculate next values
-      let nextValue, nextBattery;
-      if (!lastDatapoint) {
-        nextValue = 0;
-        nextBattery = 0;
-      } else {
-        nextValue = Math.min(3300, lastDatapoint.value + 30); // Increase by 30, max 3300
-        nextBattery = Math.min(100, lastDatapoint.battery + 1); // Increase by 1, max 100
-      }
-
-      const datapoint = {
-        value: nextValue,
-        battery: nextBattery,
-        deviceHashedMACAddress: deviceId
-      };
-
-      await createDatapoint(datapoint);
-
-      // Update last datapoint
-      const newLastDatapoint = { value: nextValue, battery: nextBattery };
-      setLastDatapoint(newLastDatapoint);
-      localStorage.setItem(`lastDatapoint_${deviceId}`, JSON.stringify(newLastDatapoint));
-
-      toast.success(`Created datapoint: Value = ${nextValue}, Battery = ${nextBattery}`);
-    } catch (error) {
-      console.error("Failed to generate datapoint:", error);
-      toast.error("Failed to generate datapoint");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleStartSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,7 +126,8 @@ export default function AddDatapointsPage() {
             <ol className="list-decimal list-inside space-y-1 text-sm">
               <li>Enter the device ID (hashedMACAddress)</li>
               <li>Click &quot;Start Session&quot; to start a new session</li>
-              <li>Each click will add a new datapoint based on the previous value, either decreasing ([3300, 0] for moisture, [100, 0] for battery) or increasing ([0, 3300] for moisture, [0, 100] for battery)</li>
+              <li>Enter custom value (0-3300) and battery (0-100)</li>
+              <li>Click &quot;Submit Datapoint&quot; to add your values</li>
             </ol>
           </div>
 
@@ -180,7 +139,7 @@ export default function AddDatapointsPage() {
             </div>
           )}
 
-          <form onSubmit={handleGenerateDatapoint} className="flex flex-col space-y-4">
+          <form onSubmit={handleSubmitDatapoint} className="flex flex-col space-y-4">
             <Input
               type="text"
               placeholder="Device ID (hashedMACAddress)"
@@ -188,6 +147,40 @@ export default function AddDatapointsPage() {
               onChange={(e) => setDeviceId(e.target.value)}
               required
             />
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label htmlFor="value" className="text-sm text-muted-foreground block mb-1">
+                  Value (0-3300)
+                </label>
+                <Input
+                  id="value"
+                  type="number"
+                  min="0"
+                  max="3300"
+                  placeholder="Value"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="battery" className="text-sm text-muted-foreground block mb-1">
+                  Battery (0-100)
+                </label>
+                <Input
+                  id="battery"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Battery"
+                  value={battery}
+                  onChange={(e) => setBattery(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            
             <Button
               type="button"
               disabled={isLoading}
@@ -196,21 +189,15 @@ export default function AddDatapointsPage() {
             >
               {isLoading ? "Starting..." : "Start Session"}
             </Button>
+            
             <div className="border-t my-2" />
+            
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Generating..." : "Generate Decreasing Data"}
-            </Button>
-            <Button
-              type="button"
-              disabled={isLoading}
-              onClick={handleGenerateIncreasingDatapoint}
-              variant="secondary"
-            >
-              {isLoading ? "Generating..." : "Generate Increasing Data"}
+              {isLoading ? "Submitting..." : "Submit Datapoint"}
             </Button>
           </form>
         </div>
       </div>
     </div>
   )
-} 
+}

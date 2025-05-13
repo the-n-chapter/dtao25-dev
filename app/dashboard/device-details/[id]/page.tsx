@@ -9,7 +9,6 @@ import { AlertCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "@/components/chart"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getDeviceById, getCurrentSessionDatapoints } from "@/lib/front_end_api_service"
-import { estimateTimeRemainingLR } from '@/lib/utils'
 
 type Device = {
   id: string
@@ -39,7 +38,6 @@ export default function DeviceDetailsPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [showPercentage, setShowPercentage] = useState(true)
-  const [maxMoistureValue, setMaxMoistureValue] = useState(3300) // Default max value
   const MIN_MOISTURE_THRESHOLD = 100 // Minimum threshold to prevent false 100% readings
 
   const fetchDeviceData = async () => {
@@ -103,7 +101,7 @@ export default function DeviceDetailsPage() {
   const convertToPercentage = (value: number) => {
     const actualMax = currentSession?.datapoints?.length
       ? Math.max(...currentSession.datapoints.map(dp => dp.value))
-      : maxMoistureValue;
+      : 3300;
   
     if (actualMax < 100) {
       return Math.round((value / 100) * 10);
@@ -116,15 +114,21 @@ export default function DeviceDetailsPage() {
   // Regression-based drying time estimate (to 0% moisture)
   const getEstimatedDryingTime = () => {
     if (!currentSession || !currentSession.datapoints || currentSession.datapoints.length < 2) return 'Not enough data';
-    // Convert all values to percentage for regression using dynamic max
-    const datapoints = currentSession.datapoints.map(dp => ({
-      value: convertToPercentage(dp.value),
-      createdAt: dp.createdAt
-    }));
-    const ms = estimateTimeRemainingLR(datapoints, 0);
+    
+    // Get the latest moisture value in percentage
+    const latestValue = convertToPercentage(currentSession.datapoints[currentSession.datapoints.length - 1].value);
+    
+    // Use the averageSlope from the cloud service
+    const slope = currentSession.averageSlope * 3600000;
+    if (!slope || slope >= 0) return 'Estimating...';
+    
+    // Calculate time remaining in milliseconds
+    const ms = (latestValue / Math.abs(slope)) * 3600000; // Convert hours to milliseconds
+    
     if (!isFinite(ms) || ms < 0) return 'Estimating...';
     const hours = Math.floor(ms / 3600000);
     const mins = Math.round((ms % 3600000) / 60000);
+    
     if (hours < 1 && mins < 1) return 'Less than 1 min';
     if (hours < 1) return `${mins} min${mins === 1 ? '' : 's'}`;
     if (hours < 24) return `${hours}h ${mins}m`;
@@ -186,18 +190,18 @@ export default function DeviceDetailsPage() {
         </div>
 
         <div className="relative p-4 sm:p-5 md:p-6 lg:p-8">
-          <div className="flex justify-between items-center mb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            className="text-[#5DA9E9] hover:text-[#4A98D8]"
-          >
-            <RefreshCw className="h-3 w-3 text-[#5DA9E9]" />
-            Refresh
-          </Button>
-            <div className="text-sm text-muted-foreground">
-              Last updated: {new Date(lastUpdated).toLocaleString()}
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              className="text-[#5DA9E9] hover:text-[#4A98D8]"
+            >
+              <RefreshCw className="text-[#5DA9E9]" />
+              Refresh
+            </Button>
+            <div className="text-sm text-muted-foreground mt-1 sm:mt-0 ml-auto">
+              Updated: {new Date(lastUpdated).toLocaleString()}
             </div>
           </div>
 
