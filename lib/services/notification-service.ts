@@ -266,6 +266,12 @@ class NotificationService {
     this.saveNotifications();
   }
 
+  private notificationExists(deviceId: string, type: 'battery' | 'moisture', threshold: number): boolean {
+    return this.notificationState.notifications.some(
+      n => n.deviceId === deviceId && n.type === type && n.percentage === threshold
+    );
+  }
+
   handleBatteryUpdate(username: string, deviceId: string, batteryLevel: number) {
     const settings = this.getUserSettings(username)
 
@@ -296,21 +302,25 @@ class NotificationService {
 
       // Case 1: Exact threshold match for 100%
       if (threshold === 100 && batteryLevel === threshold && !this.notificationState.batteryAlertActive[alertKey]) {
-        this.notificationState.batteryAlertActive[alertKey] = true;
-        const title = `Device ${deviceId}: Battery Level Alert`;
-        const description = `Battery level has reached ${batteryLevel}%.`;
-        
-        this.addNotification(title, description, 'battery', deviceId, batteryLevel);
-        this.updateLastNotificationTime(deviceId);
+        if (!this.notificationExists(deviceId, 'battery', batteryLevel)) {
+          this.notificationState.batteryAlertActive[alertKey] = true;
+          const title = `Device ${deviceId}: Battery Level Alert`;
+          const description = `Battery level is full.`;
+          
+          this.addNotification(title, description, 'battery', deviceId, batteryLevel);
+          this.updateLastNotificationTime(deviceId);
+        }
       }
       // Case 2: Below threshold for non-100% thresholds
       else if (threshold !== 100 && batteryLevel < threshold && !this.notificationState.batteryAlertActive[alertKey]) {
-        this.notificationState.batteryAlertActive[alertKey] = true;
-        const title = `Device ${deviceId}: Battery Level Alert`;
-        const description = `Battery level is currently at ${batteryLevel}%.`;
-        
-        this.addNotification(title, description, 'battery', deviceId, batteryLevel);
-        this.updateLastNotificationTime(deviceId);
+        if (!this.notificationExists(deviceId, 'battery', batteryLevel)) {
+          this.notificationState.batteryAlertActive[alertKey] = true;
+          const title = `Device ${deviceId}: Battery Level Alert`;
+          const description = `Battery level is currently at ${batteryLevel}%.`;
+          
+          this.addNotification(title, description, 'battery', deviceId, batteryLevel);
+          this.updateLastNotificationTime(deviceId);
+        }
       }
 
       // Reset alert state when battery level changes from threshold
@@ -370,12 +380,14 @@ class NotificationService {
 
       // Case 1: First time entering the interval
       if (inInterval && !wasInInterval) {
-        this.notificationState.moistureAlertActive[alertKey] = true
-        const title = `Device ${deviceId}: Moisture Level Alert`;
-        const description = `Moisture level is currently at ${moisturePercentage}%.`;
-        
-        this.addNotification(title, description, 'moisture', deviceId, moisturePercentage);
-        this.updateLastNotificationTime(deviceId)
+        if (!this.notificationExists(deviceId, 'moisture', moisturePercentage)) {
+          this.notificationState.moistureAlertActive[alertKey] = true
+          const title = `Device ${deviceId}: Moisture Level Alert`;
+          const description = `Moisture level is currently at ${moisturePercentage}%.`;
+          
+          this.addNotification(title, description, 'moisture', deviceId, moisturePercentage);
+          this.updateLastNotificationTime(deviceId)
+        }
       }
       // Case 2: Exiting the interval
       else if (wasInInterval && !inInterval) {
