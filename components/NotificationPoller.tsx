@@ -49,7 +49,7 @@ export function NotificationPoller() {
       }
     }
     poll()
-    const interval = setInterval(poll, 1000 * 60)
+    const interval = setInterval(poll, 1000)
     return () => clearInterval(interval)
   }, [])
   return <NotificationDialog />
