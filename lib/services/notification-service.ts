@@ -305,7 +305,7 @@ class NotificationService {
         if (!this.notificationExists(deviceId, 'battery', batteryLevel)) {
           this.notificationState.batteryAlertActive[alertKey] = true;
           const title = `Device ${deviceId}: Battery Level Alert`;
-          const description = `Battery level is full.`;
+          const description = `Battery is fully charged.`;
           
           this.addNotification(title, description, 'battery', deviceId, batteryLevel);
           this.updateLastNotificationTime(deviceId);
