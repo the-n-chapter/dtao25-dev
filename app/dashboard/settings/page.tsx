@@ -346,9 +346,9 @@ export default function SettingsPage() {
 
             <TabsContent value="notifications" className="space-y-6">
               <Card className="p-6 space-y-6">
-                <p className="text-sm text-muted-foreground text-justify mb-4">
-                  The settings are applied to <span className="font-bold">all</span> the devices connected to your account.
-                  If you turn on notifications, choose at least <span className="font-bold">one</span> threshold for each.
+                <p className="text-sm text-muted-foreground mb-4">
+                  Settings apply to <span className="font-bold">all</span> devices linked to your account.
+                  To enable notifications, you must select at least <span className="font-bold">one</span> threshold for each.
                 </p>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
