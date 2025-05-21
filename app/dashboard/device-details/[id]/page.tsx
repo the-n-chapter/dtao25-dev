@@ -113,27 +113,30 @@ export default function DeviceDetailsPage() {
 
   // Regression-based drying time estimate (to 0% moisture)
   const getEstimatedDryingTime = () => {
-    if (!currentSession || !currentSession.datapoints || currentSession.datapoints.length < 2) return 'Not enough data';
-    
-    // Get the latest moisture value in percentage
-    const latestValue = convertToPercentage(currentSession.datapoints[currentSession.datapoints.length - 1].value);
-    
-    // Use the averageSlope from the cloud service
-    const slope = currentSession.averageSlope;
+    if (!currentSession || !currentSession.datapoints || currentSession.datapoints.length < 2) {
+      return 'Not enough data';
+    }
+  
+    // Use the latest raw sensor value directly
+    const latestRawValue = currentSession.datapoints[currentSession.datapoints.length - 1].value;
+  
+    const slope = currentSession.averageSlope; // raw units per ms
     if (!slope || slope >= 0) return 'Estimating...';
-    
-    // Calculate time remaining in milliseconds
-    const ms = (latestValue / Math.abs(slope)) * 3600000; // Convert hours to milliseconds
-    
+  
+    // Estimate time in ms using raw value
+    const ms = latestRawValue / Math.abs(slope);
+  
     if (!isFinite(ms) || ms < 0) return 'Estimating...';
-    const hours = Math.floor(ms / 3600000);
-    const mins = Math.round((ms % 3600000) / 60000);
-    
+  
+    const minutes = Math.round(ms / 60000);
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+  
     if (hours < 1 && mins < 1) return 'Less than 1 min';
     if (hours < 1) return `${mins} min${mins === 1 ? '' : 's'}`;
     if (hours < 24) return `${hours}h ${mins}m`;
     return 'More than 1 day';
-  }
+  };  
 
   if (loading) {
     return (
