@@ -119,7 +119,7 @@ export default function DeviceDetailsPage() {
     const latestValue = convertToPercentage(currentSession.datapoints[currentSession.datapoints.length - 1].value);
     
     // Use the averageSlope from the cloud service
-    const slope = currentSession.averageSlope * 3600000;
+    const slope = currentSession.averageSlope;
     if (!slope || slope >= 0) return 'Estimating...';
     
     // Calculate time remaining in milliseconds
