@@ -3,13 +3,23 @@ import { useState, useEffect } from 'react'
 import Link from "next/link"
 import { PublicNav } from "@/components/public-nav"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 
 export default function WelcomePage() {
+  const router = useRouter()
   const [text, setText] = useState('');
   const fullText = "we're pintell";
   const [isBlinking, setIsBlinking] = useState(false);
   const [isTyping, setIsTyping] = useState(true);
   const [blinkCount, setBlinkCount] = useState(0);
+
+  useEffect(() => {
+    // Check if user is already authenticated
+    const token = localStorage.getItem("authToken")
+    if (token) {
+      router.push("/dashboard")
+    }
+  }, [router])
 
   useEffect(() => {
     let isMounted = true;
