@@ -70,7 +70,7 @@ export default function AddDevicePage() {
                 Connect to the Pintell device&apos;s Wi-Fi.
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                   <li>Go to your Wi-Fi settings.</li>
-                  <li>Choose the network name and enter the password listed on the packaging.</li>
+                  <li>Choose the network name and enter the password listed in the Instructions leaflet.</li>
                   <li>Once successfully connected, click the button below.</li>
                 </ul>
               </li>
