@@ -208,7 +208,7 @@ export default function DeviceDetailsPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border h-[350px] overflow-hidden mb-4">
+          <div className="rounded-lg border border-border bg-card h-[350px] overflow-hidden mb-4">
             {showPercentage ? (
               <div className="p-4 md:p-6 text-center h-full flex flex-col justify-center">
                 <TooltipProvider>
@@ -218,14 +218,14 @@ export default function DeviceDetailsPage() {
                         <span className={getMoistureColor(currentMoisturePercentage)}>{currentMoisturePercentage}%</span>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-white text-black border shadow-sm">
+                    <TooltipContent className="bg-popover text-popover-foreground border-border">
                       <p>Current Moisture Level</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
                 <div className="mt-8">
                   <h3 className="mb-2 text-sm text-muted-foreground">Estimated Drying Time</h3>
-                  <p className="text-2xl font-bold">{getEstimatedDryingTime()}</p>
+                  <p className="text-2xl font-bold text-foreground">{getEstimatedDryingTime()}</p>
                 </div>
               </div>
             ) : (
@@ -234,20 +234,37 @@ export default function DeviceDetailsPage() {
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={history} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="timestamp" tickFormatter={formatDate} minTickGap={60} />
-                      <YAxis domain={[0, 100]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="timestamp" 
+                        tickFormatter={formatDate} 
+                        minTickGap={60}
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      />
                       <RechartsTooltip
                         labelFormatter={(value) => new Date(value).toLocaleString()}
                         formatter={(value) => [`${value}%`, "Moisture"]}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          color: "hsl(var(--popover-foreground))",
+                          borderRadius: "0.5rem",
+                          padding: "0.5rem"
+                        }}
                       />
                       <Line
                         type="monotone"
                         dataKey="value"
-                        stroke="#007BFF"
+                        stroke="hsl(var(--primary))"
                         strokeWidth={2}
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ r: 3, fill: "hsl(var(--primary))" }}
+                        activeDot={{ r: 5, fill: "hsl(var(--primary))" }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
