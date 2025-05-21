@@ -65,7 +65,7 @@ export default function AddDevicePage() {
           <div className="max-w-lg">
             <ol className="space-y-4 list-decimal list-inside text-sm md:text-base">
               <li>Turn on the Pintell device.</li>
-              <li>Toggle the pairing button to the pressed position and wait for the LED to blink.</li>
+              <li>Press the pairing button until the LED blinks.</li>
               <li>
                 Connect to the Pintell device&apos;s Wi-Fi.
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
