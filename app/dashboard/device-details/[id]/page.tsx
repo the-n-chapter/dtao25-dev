@@ -124,7 +124,7 @@ export default function DeviceDetailsPage() {
     if (!slope || slope >= 0) return 'Estimating...';
   
     // Estimate time in ms using raw value
-    const ms = latestRawValue / slope;
+    const ms = latestRawValue / Math.abs(slope);
   
     if (!isFinite(ms) || ms < 0) return 'Estimating...';
   
